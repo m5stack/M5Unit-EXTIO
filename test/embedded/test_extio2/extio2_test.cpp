@@ -371,7 +371,7 @@ TEST_P(TestExtIO2, I2CAddress)
     EXPECT_FALSE(unit->changeI2CAddress(0x07));  // Invalid
     EXPECT_FALSE(unit->changeI2CAddress(0x78));  // Invalid
     EXPECT_FALSE(unit->changeI2CAddress(128));   // Invalid
-    
+
     // Change to 0x09
     EXPECT_TRUE(unit->changeI2CAddress(0x09));
     EXPECT_TRUE(unit->readI2CAddress(addr));
@@ -382,7 +382,6 @@ TEST_P(TestExtIO2, I2CAddress)
     EXPECT_NE(ver, 0x00);
     m5::utility::delay(1000);
 
-    
     // Change to 0x77
     EXPECT_TRUE(unit->changeI2CAddress(0x77));
     EXPECT_TRUE(unit->readI2CAddress(addr));
@@ -411,5 +410,4 @@ TEST_P(TestExtIO2, I2CAddress)
 
     EXPECT_TRUE(unit->readFirmwareVersion(ver));
     EXPECT_NE(ver, 0x00);
-
 }
