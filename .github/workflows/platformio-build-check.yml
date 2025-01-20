@@ -115,14 +115,17 @@ jobs:
         include:
           # Specific sketches for m5stack-core-esp32 only
           - example: DigOutput
+            unit: UnitExtIO2
             board: Core
             framework: Arduino
             espressif32: latest
           - example: ServoControl
+            unit: UnitExtIO2
             board: Core
             framework: Arduino
             espressif32: latest
           - example: LEDControl
+            unit: UnitExtIO2
             board: Core
             framework: Arduino
             espressif32: latest
