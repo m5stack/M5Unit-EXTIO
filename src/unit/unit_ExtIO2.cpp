@@ -39,13 +39,6 @@ const types::uid_t UnitExtIO2::attr{0};
 
 bool UnitExtIO2::begin()
 {
-    for (uint8_t a = 0; a < 200; ++a) {
-        Wire.beginTransmission(a);
-        if (Wire.endTransmission() == 0) {
-            M5_LIB_LOGE("[%02X]:Detected", a);
-        }
-    }
-
     if (!readFirmwareVersion(_fw_version) || _fw_version == 0x00) {
         M5_LIB_LOGE("Cannot detect %s. Addr:%X FW:%X", deviceName(), address(), _fw_version);
         return false;
@@ -55,6 +48,12 @@ bool UnitExtIO2::begin()
         M5_LIB_LOGE("Failed to readAllMode");
         return false;
     }
+
+    if (!canPWMControl()) {
+        M5_LIB_LOGW("Your firmware version (%u) is less than %u. PWM control function is not available.", _fw_version,
+                    FIRMWARE_VERSION_CAN_PWM_CONTROL);
+    }
+
     return _cfg.apply_mode ? writeAllMode(_cfg.mode) : true;
 }
 
@@ -185,12 +184,7 @@ bool UnitExtIO2::readPinBitsDigitalInput(uint8_t& high_bits, const uint8_t pin_b
 bool UnitExtIO2::readAllDigitalInput(uint8_t& high_bits)
 {
     high_bits = 0;
-#if 0
-    return std::all_of(_mode.begin(), _mode.end(), [](const Mode m) { return m == Mode::DigitalInput; }) &&
-           readRegister8(DIGITAL_INPUTS_REG, high_bits, 0);
-#else
     return readPinBitsDigitalInput(high_bits, 0xFF);
-#endif
 }
 
 //

@@ -9,6 +9,13 @@ M5UnitUnified is a library for unified handling of various M5 units products.
 
 EXT.IO2 is an IO extended unit, based on STM32F030 main controller, using I2C communication interface and providing 8 IO expansion. Each IO supports independent configuration of digital I/O, ADC, SERVO control, RGB LED control modes. Supports configuration of device I2C address, which means that users can mount multiple EXT.IO2 UNITs on the same I2C BUS to extend more IO resources. Suitable for multiple digital/analog signal acquisition, with lighting/servo control applications.
 
+
+## Future Plans
+- EXTIO2 firmware V3 function (PWM control) is not yet supported.  
+It will be supported in the next update.
+- Unit EXT.IO(SKU:U011) will support soon.
+
+
 ## Related Link
 See also examples using conventional methods here.
 
@@ -25,6 +32,9 @@ See also examples using conventional methods here.
 
 ## Examples
 See also [examples/UnitUnified](examples/UnitUnified)
+
+## Firmware for SKU:U011-B
+See also https://github.com/m5stack/M5Unit-EXTIO2-Internal-FW
 
 ### Doxygen document
 [GitHub Pages](https://m5stack.github.io/M5Unit-EXTIO/)
