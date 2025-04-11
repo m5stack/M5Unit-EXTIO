@@ -35,6 +35,7 @@ enum class Mode : int8_t {
     ADCInput,       //!< ADC input
     ServoControl,   //!< Servo control
     LEDControl,     //!< LED control
+    //    PWMControl,     //!< PWM Control (Firmware V3 or later)
 };
 static_assert(sizeof(Mode) == sizeof(uint8_t), "Mode and uint8_t size must match");
 
@@ -47,13 +48,19 @@ enum AnalogMode : uint8_t {
     Bits12,  //!< 12 bits (0 - 4095)
 };
 
+#if 0
 /*!
-  @struct Data
-  @brief Measurement data group
- */
-struct Data {
-    std::array<uint8_t, 1> raw{};
+  @enum PWM
+  @brief PWM Frequency
+*/
+enum class PWM : uint8_t {
+    Frequency2000Hz,  //!< 2Khz
+    Frequency1000Hz,  //!< 1Khz
+    Frequency500Hz,   //!< 500Hz
+    Frequency250Hz,   //!< 250Hz
+    Frequency125Hz,   //!< 125Hz
 };
+#endif
 
 }  // namespace extio2
 
@@ -66,6 +73,7 @@ class UnitExtIO2 : public Component {
 
 public:
     static constexpr uint8_t NUMBER_OF_PINS{8};  //!< The number of pins
+
     ///@name Valid range
     ///@{
     static constexpr uint8_t MIN_ANALOG_8{0};         //!< Minimum input of analog 8 bits mode
@@ -418,7 +426,7 @@ public:
      */
     bool readPinBitsServoAngle(uint8_t degrees[NUMBER_OF_PINS], const uint8_t pin_bits);
     /*!
-      @brief Read the servo angle from the specified pin
+      @brief Read the servo angle from all pins
       @param[out] degree Angle
       @param pin Pin number
       @return True if successful
@@ -604,6 +612,50 @@ public:
     }
     ///@}
 
+#if 0
+    ///@waring Only works with firmware V3 or later
+    ///@name PWM control
+    ///@{
+    /*!
+      @brief Read the PWM duty cycle
+      @param[out] cycle Duty cycle (0-100)
+      @param pin Pin number
+      @return True if successful
+      @pre The mode of the specified pin must be Mode::PWMControl
+      @waring Only works with firmware V3 or later
+     */
+    bool readPWMDutyCycle(uint8_t& cycle, const uint8_t pin);
+    /*!
+      @brief Read the PWM duty cycle from the specified pin
+      @param[out] cycles Duty cycle array
+      @param pin_bits Bits of the target pin
+      @return True if successful
+      @pre The mode of the specified pin must be Mode::PWMControl
+      @waring Only works with firmware V3 or later
+    */
+    bool readPinBitsPWMDutyCycle(uint8_t cycles[NUMBER_OF_PINS], const uint8_t pin_bits);
+    /*!
+      @brief Read the PWM duty cycle from all pins
+      @param[out] cycles Duty cycle array
+      @return True if successful
+      @pre The mode of the specified pin must be Mode::PWMControl
+      @waring Only works with firmware V3 or later
+    */
+    inline bool readAllPWMDutyCycle(uint8_t cycles[NUMBER_OF_PINS])
+    {
+        return readPinBitsPWMDutyCycle(cycles[NUMBER_OF_PINS], 0xFF);
+    }
+    bool writePWMDutyCycle(const uint8_t pin, const uint8_t cycle);
+    bool writePinBitsPWMDutyCycle(const uint8_t pin_bits, const uint8_t cycle);
+    inline bool writeAllPWMDutyCycle(uint8_t cycle)
+    {
+        return writePinBitsPWMDutyCycle(0xFF, cycle);
+    }
+    bool readPWMFrequency(extio2::PWM& freq);
+    bool writePWMFrequency(const extio2::PWM freq);
+    ///@}
+#endif
+
     ///@warning Handling warning
     ///@warning Repeated writing may cause partition damage
     ///@name I2C Address
@@ -627,6 +679,12 @@ protected:
     bool write_pin_bits_digital_output(const uint8_t pin_bits, const bool high);
     bool write_pin_bits_digital_output(const uint8_t pin_bits, const uint8_t high_bits);
 
+    static constexpr uint8_t FIRMWARE_VERSION_CAN_PWM_CONTROL{0x03};
+    inline bool canPWMControl() const
+    {
+        return _fw_version >= FIRMWARE_VERSION_CAN_PWM_CONTROL;
+    }
+
 private:
     std::array<extio2::Mode, NUMBER_OF_PINS> _mode{};
     config_t _cfg{};
@@ -648,6 +706,9 @@ constexpr uint8_t SERVO_PULSE_16BITS_REG{0x60};
 constexpr uint8_t RGB_24BITS_REG{0x70};
 constexpr uint8_t FW_VERSION_REG{0xFE};
 constexpr uint8_t ADDRESS_REG{0xFF};
+constexpr uint8_t PWM_DUTY_REG{0x90};  // Firmware V3 or later
+constexpr uint8_t PWM_FREQ_REG{0xA0};  // Firmware V3 or later
+
 }  // namespace command
 }  // namespace extio2
 ///@endcond
