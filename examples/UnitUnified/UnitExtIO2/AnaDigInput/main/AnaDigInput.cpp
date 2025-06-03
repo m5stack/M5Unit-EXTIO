@@ -103,7 +103,7 @@ void analog8_function()
         }
         latest = at;
         render_status(v);
-        M5_LOGI("ANA8:%3u,%3u,%3u,%3u,%3u,%3u,%3u,%3u", v[0], v[1], v[2], v[3], v[4], v[5], v[6], v[7]);
+        M5.Log.printf("ANA8:%3u,%3u,%3u,%3u,%3u,%3u,%3u,%3u\n", v[0], v[1], v[2], v[3], v[4], v[5], v[6], v[7]);
     }
 }
 
@@ -119,7 +119,7 @@ void analog12_function()
         }
         latest = at;
         render_status(v);
-        M5_LOGI("ANA12:%4u,%4u,%4u,%4u,%4u,%4u,%4u,%4u", v[0], v[1], v[2], v[3], v[4], v[5], v[6], v[7]);
+        M5.Log.printf("ANA12:%4u,%4u,%4u,%4u,%4u,%4u,%4u,%4u\n", v[0], v[1], v[2], v[3], v[4], v[5], v[6], v[7]);
     }
 }
 
@@ -135,7 +135,7 @@ void digital_function()
         }
         latest = at;
         render_status(high_bits);
-        M5_LOGI("DIG:%X", high_bits);
+        M5.Log.printf("DIG:%X\n", high_bits);
     }
 }
 }  // namespace

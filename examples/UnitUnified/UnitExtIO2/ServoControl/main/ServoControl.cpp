@@ -89,6 +89,7 @@ void loop()
         }
         lcd.setCursor(16, 48);
         lcd.printf("Angle:%3u(deg)", deg);
+        M5.Log.printf("Angle:%3u(deg)\n", deg);
         m5::utility::delay(500);
     }
     m5::utility::delay(1000);
