@@ -35,7 +35,7 @@ namespace unit {
 // class UnitExtIO2
 const char UnitExtIO2::name[] = "UnitExtIO2";
 const types::uid_t UnitExtIO2::uid{"UnitExtIO2"_mmh3};
-const types::uid_t UnitExtIO2::attr{0};
+const types::attr_t UnitExtIO2::attr{attribute::AccessI2C};
 
 bool UnitExtIO2::begin()
 {

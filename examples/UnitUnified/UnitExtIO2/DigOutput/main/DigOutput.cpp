@@ -70,7 +70,7 @@ void setup()
 
     unit.writeAllMode(Mode::DigitalOutput);
     unit.writeAllDigitalOutput(false);  // All pins to LOW
-    M5_LOGI("Current Pin:%u", current);
+    M5.Log.printf("Current Pin:%u\n", current);
 }
 
 void loop()
@@ -83,12 +83,12 @@ void loop()
     if (M5.BtnA.wasClicked() || touch.wasClicked()) {
         // Toggle HIGH/LOW
         state ^= (1U << current);
-        M5_LOGI("Change Pin:%u to %s", current, (state & (1U << current)) ? "HIGH" : "LOW");
+        M5.Log.printf("Change Pin:%u to %s\n", current, (state & (1U << current)) ? "HIGH" : "LOW");
         dirty = true;
     } else if (M5.BtnA.wasHold() || touch.wasHold()) {
         // Change current to next
         current = (current + 1) % UnitExtIO2::NUMBER_OF_PINS;
-        M5_LOGI("Current Pin:%u", current);
+        M5.Log.printf("Current Pin:%u\n", current);
         dirty = true;
     }
 
@@ -97,9 +97,9 @@ void loop()
             M5_LOGE("Failed to output");
         }
         render();
-        M5_LOGI("Output Pin0:%u%u%u%u%u%u%u%u:Pin7", (bool)(state & 0x01), (bool)(state & 0x02), (bool)(state & 0x04),
-                (bool)(state & 0x08), (bool)(state & 0x10), (bool)(state & 0x20), (bool)(state & 0x40),
-                (bool)(state & 0x80));
+        M5.Log.printf("Output Pin0:%u%u%u%u%u%u%u%u:Pin7\n", (bool)(state & 0x01), (bool)(state & 0x02),
+                      (bool)(state & 0x04), (bool)(state & 0x08), (bool)(state & 0x10), (bool)(state & 0x20),
+                      (bool)(state & 0x40), (bool)(state & 0x80));
 
         dirty = false;
     }

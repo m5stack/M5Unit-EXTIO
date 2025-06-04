@@ -102,7 +102,7 @@ void loop()
 
     lcd.setCursor(16, 32 + 16);
     lcd.printf("RGB(%3u,%3u,%3u)", r, g, b);
-    M5_LOGI("RGB(%3u,%3u,%3u)", r, g, b);
+    M5.Log.printf("RGB(%3u,%3u,%3u)\n", r, g, b);
     lcd.fillRect(16, 32 * 2, lcd.width(), 16, (uint16_t)lgfx::rgb565_t(r, g, b));
 
     ++counter;
