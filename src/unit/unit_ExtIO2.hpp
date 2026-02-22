@@ -100,6 +100,8 @@ public:
                                              extio2::Mode::DigitalInput, extio2::Mode::DigitalInput};
     };
 
+    //! @brief Constructor
+    //! @param addr I2C address (default DEFAULT_ADDRESS)
     explicit UnitExtIO2(const uint8_t addr = DEFAULT_ADDRESS) : Component(addr)
     {
         auto ccfg  = component_config();
@@ -107,6 +109,7 @@ public:
         component_config(ccfg);
         std::fill(_mode.begin(), _mode.end(), extio2::Mode::Invalid);
     }
+    //! @brief Destructor
     virtual ~UnitExtIO2()
     {
     }
@@ -115,12 +118,12 @@ public:
 
     ///@name Settings for begin
     ///@{
-    /*! @brief Gets the configration */
+    /*! @brief Gets the configuration */
     inline config_t config()
     {
         return _cfg;
     }
-    //! @brief Set the configration
+    //! @brief Set the configuration
     inline void config(const config_t& cfg)
     {
         _cfg = cfg;
@@ -166,8 +169,7 @@ public:
     bool readMode(extio2::Mode& mode, const uint8_t pin);
     /*!
       @brief Read the mode of all pins
-      @param[out] mode Mode array
-      @param pin Pin number
+      @param[out] mode Mode array of all pins
       @return True if successful
      */
     bool readAllMode(extio2::Mode mode[NUMBER_OF_PINS]);
@@ -201,7 +203,7 @@ public:
     bool writeAllMode(const extio2::Mode mode[NUMBER_OF_PINS]);
     ///@}
 
-    ///@name Digiat input
+    ///@name Digital input
     ///@{
     /*!
       @brief Read the digital input from the specified pin
@@ -407,7 +409,7 @@ public:
     ///@note Valid angle degree range 0 - 180
     ///@note Valid pulse range 500 - 2500
     ///@name Servo control
-    //@{
+    ///@{
     /*!
       @brief Read the servo angle from the specified pin
       @param[out] degree Angle
@@ -417,9 +419,9 @@ public:
      */
     bool readServoAngle(uint8_t& degree, const uint8_t pin);
     /*!
-      @brief Read the servo angle from the specified pin
-      @param[out] degree Angle
-      @param pin Pin number
+      @brief Read the servo angle from the specified pin bits
+      @param[out] degrees Angle array of all pins
+      @param pin_bits Bits of the target pin
       @return True if successful
       @pre The mode of the specified pin must be Mode::ServoControl
       @warning degrees values for unspecified pins are undefined
@@ -427,10 +429,9 @@ public:
     bool readPinBitsServoAngle(uint8_t degrees[NUMBER_OF_PINS], const uint8_t pin_bits);
     /*!
       @brief Read the servo angle from all pins
-      @param[out] degree Angle
-      @param pin Pin number
+      @param[out] degrees Angle array of all pins
       @return True if successful
-      @pre The mode of all pin must be Mode::ServoControl
+      @pre The mode of all pins must be Mode::ServoControl
      */
     inline bool readAllServoAngle(uint8_t degrees[NUMBER_OF_PINS])
     {
@@ -555,7 +556,7 @@ public:
      */
     inline bool writeLEDColor(const uint8_t pin, const uint32_t rgb888)
     {
-        return writeLEDColor(pin, rgb888 >> 16, rgb888 > 8, rgb888 & 0xFF);
+        return writeLEDColor(pin, rgb888 >> 16, rgb888 >> 8, rgb888 & 0xFF);
     }
     /*!
       @brief Write the LED RGB888 to the specified pin
@@ -613,7 +614,7 @@ public:
     ///@}
 
 #if 0
-    ///@waring Only works with firmware V3 or later
+    ///@warning Only works with firmware V3 or later
     ///@name PWM control
     ///@{
     /*!
@@ -622,7 +623,7 @@ public:
       @param pin Pin number
       @return True if successful
       @pre The mode of the specified pin must be Mode::PWMControl
-      @waring Only works with firmware V3 or later
+      @warning Only works with firmware V3 or later
      */
     bool readPWMDutyCycle(uint8_t& cycle, const uint8_t pin);
     /*!
@@ -631,7 +632,7 @@ public:
       @param pin_bits Bits of the target pin
       @return True if successful
       @pre The mode of the specified pin must be Mode::PWMControl
-      @waring Only works with firmware V3 or later
+      @warning Only works with firmware V3 or later
     */
     bool readPinBitsPWMDutyCycle(uint8_t cycles[NUMBER_OF_PINS], const uint8_t pin_bits);
     /*!
@@ -639,7 +640,7 @@ public:
       @param[out] cycles Duty cycle array
       @return True if successful
       @pre The mode of the specified pin must be Mode::PWMControl
-      @waring Only works with firmware V3 or later
+      @warning Only works with firmware V3 or later
     */
     inline bool readAllPWMDutyCycle(uint8_t cycles[NUMBER_OF_PINS])
     {
@@ -664,7 +665,7 @@ public:
       @brief Change device I2C address
       @param i2c_address I2C address
       @return True if successful
-      @warning Do not changee the I2C address configuration repeatedly at high frequency
+      @warning Do not change the I2C address configuration repeatedly at high frequency
     */
     bool changeI2CAddress(const uint8_t i2c_address);
     /*!
