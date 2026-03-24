@@ -48,20 +48,6 @@ enum AnalogMode : uint8_t {
     Bits12,  //!< 12 bits (0 - 4095)
 };
 
-#if 0
-/*!
-  @enum PWM
-  @brief PWM Frequency
-*/
-enum class PWM : uint8_t {
-    Frequency2000Hz,  //!< 2Khz
-    Frequency1000Hz,  //!< 1Khz
-    Frequency500Hz,   //!< 500Hz
-    Frequency250Hz,   //!< 250Hz
-    Frequency125Hz,   //!< 125Hz
-};
-#endif
-
 }  // namespace extio2
 
 /*!
@@ -114,6 +100,7 @@ public:
     {
     }
 
+    //! @brief Begin the unit
     virtual bool begin() override;
 
     ///@name Settings for begin
@@ -285,7 +272,7 @@ public:
                                                   std::nullptr_t>::type = nullptr>
     inline bool writePinBitsDigitalOutput(const uint8_t pin_bits, const T high_bits)
     {
-        return write_pin_bits_digital_output(pin_bits, (uint8_t)high_bits);
+        return write_pin_bits_digital_output(pin_bits, static_cast<uint8_t>(high_bits));
     }
     /*!
       @brief Write the digital output HIGH to the specified pin bits
@@ -319,7 +306,6 @@ public:
     }
     /*!
       @brief Write the digital output HIGH to all pins
-      @param high HIGH if true, LOW if false
       @return True if successful
       @pre The mode of all pins must be Mode::DigitalOutput
      */
@@ -329,7 +315,6 @@ public:
     }
     /*!
       @brief Write the digital output LOW to all pins
-      @param high HIGH if true, LOW if false
       @return True if successful
       @pre The mode of all pins must be Mode::DigitalOutput
      */
@@ -472,7 +457,7 @@ public:
      */
     bool readServoPulse(uint16_t& pulse, const uint8_t pin);
     /*!
-      @brief Read the servo pulse from the specified pin
+      @brief Read the servo pulse from the specified pin bits
       @param[out] pulses Pulse array
       @param pin_bits Bits of the target pin
       @return True if successful
@@ -484,7 +469,7 @@ public:
       @brief Read the servo pulse from all pins
       @param[out] pulses Pulse array
       @return True if successful
-      @pre The mode of all pin must be Mode::ServoControl
+      @pre The mode of all pins must be Mode::ServoControl
      */
     inline bool readAllServoPulse(uint16_t pulses[NUMBER_OF_PINS])
     {
@@ -529,7 +514,7 @@ public:
      */
     bool readLEDColor(uint32_t& rgb888, const uint8_t pin);
     /*!
-      @brief Read the LED RGB888 from the specified pin
+      @brief Read the LED RGB888 from the specified pin bits
       @param[out] rgb888 RGB888 array
       @param pin_bits Bits of the target pin
       @return True if successful
@@ -556,7 +541,7 @@ public:
      */
     inline bool writeLEDColor(const uint8_t pin, const uint32_t rgb888)
     {
-        return writeLEDColor(pin, rgb888 >> 16, rgb888 >> 8, rgb888 & 0xFF);
+        return writeLEDColor(pin, (rgb888 >> 16) & 0xFF, (rgb888 >> 8) & 0xFF, rgb888 & 0xFF);
     }
     /*!
       @brief Write the LED RGB888 to the specified pin
@@ -577,10 +562,10 @@ public:
      */
     inline bool writePinBitsLEDColor(const uint8_t pin_bits, const uint32_t rgb888)
     {
-        return writePinBitsLEDColor(pin_bits, rgb888 >> 16, rgb888 >> 8, rgb888 & 0xFF);
+        return writePinBitsLEDColor(pin_bits, (rgb888 >> 16) & 0xFF, (rgb888 >> 8) & 0xFF, rgb888 & 0xFF);
     }
     /*!
-      @brief Write the LED RGB888 to the specified pin
+      @brief Write the LED RGB888 to the specified pin bits
       @param pin_bits Bits of the target pin
       @param r Red
       @param g Green
@@ -612,50 +597,6 @@ public:
         return writePinBitsLEDColor(0xFF, r, g, b);
     }
     ///@}
-
-#if 0
-    ///@warning Only works with firmware V3 or later
-    ///@name PWM control
-    ///@{
-    /*!
-      @brief Read the PWM duty cycle
-      @param[out] cycle Duty cycle (0-100)
-      @param pin Pin number
-      @return True if successful
-      @pre The mode of the specified pin must be Mode::PWMControl
-      @warning Only works with firmware V3 or later
-     */
-    bool readPWMDutyCycle(uint8_t& cycle, const uint8_t pin);
-    /*!
-      @brief Read the PWM duty cycle from the specified pin
-      @param[out] cycles Duty cycle array
-      @param pin_bits Bits of the target pin
-      @return True if successful
-      @pre The mode of the specified pin must be Mode::PWMControl
-      @warning Only works with firmware V3 or later
-    */
-    bool readPinBitsPWMDutyCycle(uint8_t cycles[NUMBER_OF_PINS], const uint8_t pin_bits);
-    /*!
-      @brief Read the PWM duty cycle from all pins
-      @param[out] cycles Duty cycle array
-      @return True if successful
-      @pre The mode of the specified pin must be Mode::PWMControl
-      @warning Only works with firmware V3 or later
-    */
-    inline bool readAllPWMDutyCycle(uint8_t cycles[NUMBER_OF_PINS])
-    {
-        return readPinBitsPWMDutyCycle(cycles[NUMBER_OF_PINS], 0xFF);
-    }
-    bool writePWMDutyCycle(const uint8_t pin, const uint8_t cycle);
-    bool writePinBitsPWMDutyCycle(const uint8_t pin_bits, const uint8_t cycle);
-    inline bool writeAllPWMDutyCycle(uint8_t cycle)
-    {
-        return writePinBitsPWMDutyCycle(0xFF, cycle);
-    }
-    bool readPWMFrequency(extio2::PWM& freq);
-    bool writePWMFrequency(const extio2::PWM freq);
-    ///@}
-#endif
 
     ///@warning Handling warning
     ///@warning Repeated writing may cause partition damage
