@@ -155,7 +155,7 @@ void loop()
         lcd.startWrite();
         lcd.setCursor(2, text_y);
         lcd.printf("RGB(%3u,%3u,%3u)", r, g, b);
-        lcd.fillRect(2, bar_y, lcd.width() - 4, font_h, (uint16_t)lgfx::rgb565_t(r, g, b));
+        lcd.fillRect(2, bar_y, lcd.width() - 4, font_h, static_cast<uint16_t>(lgfx::rgb565_t(r, g, b)));
         lcd.endWrite();
     }
     M5.Log.printf("RGB(%3u,%3u,%3u)\n", r, g, b);
