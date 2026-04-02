@@ -528,3 +528,46 @@ TEST_F(TestExtIO2, I2CAddress)
     EXPECT_TRUE(unit->readFirmwareVersion(ver));
     EXPECT_NE(ver, 0x00);
 }
+
+// begin() config application test
+struct BeginConfigParams {
+    bool apply_mode;
+    Mode mode;
+};
+
+class TestExtIO2BeginConfig : public I2CComponentTestBase<UnitExtIO2>,
+                              public ::testing::WithParamInterface<BeginConfigParams> {
+protected:
+    virtual UnitExtIO2* get_instance() override
+    {
+        auto ptr = new UnitExtIO2();
+        if (ptr) {
+            auto cfg       = ptr->config();
+            cfg.apply_mode = GetParam().apply_mode;
+            std::fill(std::begin(cfg.mode), std::end(cfg.mode), GetParam().mode);
+            ptr->config(cfg);
+        }
+        return ptr;
+    }
+};
+
+INSTANTIATE_TEST_SUITE_P(ConfigValues, TestExtIO2BeginConfig,
+                         ::testing::Values(BeginConfigParams{true, Mode::DigitalInput},
+                                           BeginConfigParams{true, Mode::ADCInput},
+                                           BeginConfigParams{false, Mode::ADCInput}));
+
+TEST_P(TestExtIO2BeginConfig, BeginAppliesConfig)
+{
+    SCOPED_TRACE(ustr);
+    const auto& p = GetParam();
+
+    std::array<Mode, UnitExtIO2::NUMBER_OF_PINS> modes{};
+    EXPECT_TRUE(unit->readAllMode(modes.data()));
+
+    if (p.apply_mode) {
+        for (uint8_t i = 0; i < UnitExtIO2::NUMBER_OF_PINS; ++i) {
+            EXPECT_EQ(modes[i], p.mode) << "pin " << +i;
+        }
+    }
+    // apply_mode == false: device retains its existing modes, just verify read succeeds
+}
