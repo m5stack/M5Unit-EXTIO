@@ -120,9 +120,9 @@ public:
     ///@name Firmware version
     ///@{
     /*!
-      @brief Gets the inner firmware version
+      @brief Gets the cached firmware version
       @return Version
-      @warning begin Cannot obtain a valid value until after success
+      @warning Cannot obtain a valid value until after successful begin()
      */
     uint8_t firmwareVersion() const
     {
@@ -139,7 +139,7 @@ public:
     ///@name Mode
     ///@{
     /*!
-      @brief Gets the inner mode
+      @brief Gets the cached mode
       @param pin Pin number
       @return Mode
     */
@@ -337,12 +337,24 @@ public:
       @pre The mode of the specified pin must be Mode::ADCInput
      */
     bool readAnalogInput(uint16_t& value, const uint8_t pin, const extio2::AnalogMode amode);
-    //! @brief Read the analog input 8 bits from the specified pin
+    /*!
+      @brief Read the analog input 8 bits from the specified pin
+      @param[out] value Value
+      @param pin Pin number
+      @return True if successful
+      @pre The mode of the specified pin must be Mode::ADCInput
+    */
     inline bool readAnalogInput8(uint16_t& value, const uint8_t pin)
     {
         return readAnalogInput(value, pin, extio2::AnalogMode::Bits8);
     }
-    //! @brief Read the analog input 12 bits from the specified pin
+    /*!
+      @brief Read the analog input 12 bits from the specified pin
+      @param[out] value Value
+      @param pin Pin number
+      @return True if successful
+      @pre The mode of the specified pin must be Mode::ADCInput
+    */
     inline bool readAnalogInput12(uint16_t& value, const uint8_t pin)
     {
         return readAnalogInput(value, pin, extio2::AnalogMode::Bits12);
@@ -358,12 +370,26 @@ public:
      */
     bool readPinBitsAnalogInput(uint16_t values[NUMBER_OF_PINS], const uint8_t pin_bits,
                                 const extio2::AnalogMode amode);
-    //! @brief Read the analog input 8 bits from the specified pin bits
+    /*!
+      @brief Read the analog input 8 bits from the specified pin bits
+      @param[out] values Value array
+      @param pin_bits Bits of the target pin
+      @return True if successful
+      @pre The mode of the specified pin must be Mode::ADCInput
+      @warning values for unspecified pins are undefined
+    */
     inline bool readPinBitsAnalogInput8(uint16_t values[NUMBER_OF_PINS], const uint8_t pin_bits)
     {
         return readPinBitsAnalogInput(values, pin_bits, extio2::AnalogMode::Bits8);
     }
-    //! @brief Read the analog input 12 bits from the specified pin bits
+    /*!
+      @brief Read the analog input 12 bits from the specified pin bits
+      @param[out] values Value array
+      @param pin_bits Bits of the target pin
+      @return True if successful
+      @pre The mode of the specified pin must be Mode::ADCInput
+      @warning values for unspecified pins are undefined
+    */
     inline bool readPinBitsAnalogInput12(uint16_t values[NUMBER_OF_PINS], const uint8_t pin_bits)
     {
         return readPinBitsAnalogInput(values, pin_bits, extio2::AnalogMode::Bits12);
@@ -598,8 +624,7 @@ public:
     }
     ///@}
 
-    ///@warning Handling warning
-    ///@warning Repeated writing may cause partition damage
+    ///@warning Repeated writing may cause flash partition damage
     ///@name I2C Address
     ///@{
     /*!
