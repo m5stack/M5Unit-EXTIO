@@ -48,20 +48,6 @@ enum AnalogMode : uint8_t {
     Bits12,  //!< 12 bits (0 - 4095)
 };
 
-#if 0
-/*!
-  @enum PWM
-  @brief PWM Frequency
-*/
-enum class PWM : uint8_t {
-    Frequency2000Hz,  //!< 2Khz
-    Frequency1000Hz,  //!< 1Khz
-    Frequency500Hz,   //!< 500Hz
-    Frequency250Hz,   //!< 250Hz
-    Frequency125Hz,   //!< 125Hz
-};
-#endif
-
 }  // namespace extio2
 
 /*!
@@ -100,6 +86,8 @@ public:
                                              extio2::Mode::DigitalInput, extio2::Mode::DigitalInput};
     };
 
+    //! @brief Constructor
+    //! @param addr I2C address (default DEFAULT_ADDRESS)
     explicit UnitExtIO2(const uint8_t addr = DEFAULT_ADDRESS) : Component(addr)
     {
         auto ccfg  = component_config();
@@ -107,20 +95,22 @@ public:
         component_config(ccfg);
         std::fill(_mode.begin(), _mode.end(), extio2::Mode::Invalid);
     }
+    //! @brief Destructor
     virtual ~UnitExtIO2()
     {
     }
 
+    //! @brief Begin the unit
     virtual bool begin() override;
 
     ///@name Settings for begin
     ///@{
-    /*! @brief Gets the configration */
+    /*! @brief Gets the configuration */
     inline config_t config()
     {
         return _cfg;
     }
-    //! @brief Set the configration
+    //! @brief Set the configuration
     inline void config(const config_t& cfg)
     {
         _cfg = cfg;
@@ -130,9 +120,9 @@ public:
     ///@name Firmware version
     ///@{
     /*!
-      @brief Gets the inner firmware version
+      @brief Gets the cached firmware version
       @return Version
-      @warning begin Cannot obtain a valid value until after success
+      @warning Cannot obtain a valid value until after successful begin()
      */
     uint8_t firmwareVersion() const
     {
@@ -149,7 +139,7 @@ public:
     ///@name Mode
     ///@{
     /*!
-      @brief Gets the inner mode
+      @brief Gets the cached mode
       @param pin Pin number
       @return Mode
     */
@@ -166,8 +156,7 @@ public:
     bool readMode(extio2::Mode& mode, const uint8_t pin);
     /*!
       @brief Read the mode of all pins
-      @param[out] mode Mode array
-      @param pin Pin number
+      @param[out] mode Mode array of all pins
       @return True if successful
      */
     bool readAllMode(extio2::Mode mode[NUMBER_OF_PINS]);
@@ -201,7 +190,7 @@ public:
     bool writeAllMode(const extio2::Mode mode[NUMBER_OF_PINS]);
     ///@}
 
-    ///@name Digiat input
+    ///@name Digital input
     ///@{
     /*!
       @brief Read the digital input from the specified pin
@@ -283,7 +272,7 @@ public:
                                                   std::nullptr_t>::type = nullptr>
     inline bool writePinBitsDigitalOutput(const uint8_t pin_bits, const T high_bits)
     {
-        return write_pin_bits_digital_output(pin_bits, (uint8_t)high_bits);
+        return write_pin_bits_digital_output(pin_bits, static_cast<uint8_t>(high_bits));
     }
     /*!
       @brief Write the digital output HIGH to the specified pin bits
@@ -317,7 +306,6 @@ public:
     }
     /*!
       @brief Write the digital output HIGH to all pins
-      @param high HIGH if true, LOW if false
       @return True if successful
       @pre The mode of all pins must be Mode::DigitalOutput
      */
@@ -327,7 +315,6 @@ public:
     }
     /*!
       @brief Write the digital output LOW to all pins
-      @param high HIGH if true, LOW if false
       @return True if successful
       @pre The mode of all pins must be Mode::DigitalOutput
      */
@@ -350,12 +337,24 @@ public:
       @pre The mode of the specified pin must be Mode::ADCInput
      */
     bool readAnalogInput(uint16_t& value, const uint8_t pin, const extio2::AnalogMode amode);
-    //! @brief Read the analog input 8 bits from the specified pin
+    /*!
+      @brief Read the analog input 8 bits from the specified pin
+      @param[out] value Value
+      @param pin Pin number
+      @return True if successful
+      @pre The mode of the specified pin must be Mode::ADCInput
+    */
     inline bool readAnalogInput8(uint16_t& value, const uint8_t pin)
     {
         return readAnalogInput(value, pin, extio2::AnalogMode::Bits8);
     }
-    //! @brief Read the analog input 12 bits from the specified pin
+    /*!
+      @brief Read the analog input 12 bits from the specified pin
+      @param[out] value Value
+      @param pin Pin number
+      @return True if successful
+      @pre The mode of the specified pin must be Mode::ADCInput
+    */
     inline bool readAnalogInput12(uint16_t& value, const uint8_t pin)
     {
         return readAnalogInput(value, pin, extio2::AnalogMode::Bits12);
@@ -371,12 +370,26 @@ public:
      */
     bool readPinBitsAnalogInput(uint16_t values[NUMBER_OF_PINS], const uint8_t pin_bits,
                                 const extio2::AnalogMode amode);
-    //! @brief Read the analog input 8 bits from the specified pin bits
+    /*!
+      @brief Read the analog input 8 bits from the specified pin bits
+      @param[out] values Value array
+      @param pin_bits Bits of the target pin
+      @return True if successful
+      @pre The mode of the specified pin must be Mode::ADCInput
+      @warning values for unspecified pins are undefined
+    */
     inline bool readPinBitsAnalogInput8(uint16_t values[NUMBER_OF_PINS], const uint8_t pin_bits)
     {
         return readPinBitsAnalogInput(values, pin_bits, extio2::AnalogMode::Bits8);
     }
-    //! @brief Read the analog input 12 bits from the specified pin bits
+    /*!
+      @brief Read the analog input 12 bits from the specified pin bits
+      @param[out] values Value array
+      @param pin_bits Bits of the target pin
+      @return True if successful
+      @pre The mode of the specified pin must be Mode::ADCInput
+      @warning values for unspecified pins are undefined
+    */
     inline bool readPinBitsAnalogInput12(uint16_t values[NUMBER_OF_PINS], const uint8_t pin_bits)
     {
         return readPinBitsAnalogInput(values, pin_bits, extio2::AnalogMode::Bits12);
@@ -407,7 +420,7 @@ public:
     ///@note Valid angle degree range 0 - 180
     ///@note Valid pulse range 500 - 2500
     ///@name Servo control
-    //@{
+    ///@{
     /*!
       @brief Read the servo angle from the specified pin
       @param[out] degree Angle
@@ -417,9 +430,9 @@ public:
      */
     bool readServoAngle(uint8_t& degree, const uint8_t pin);
     /*!
-      @brief Read the servo angle from the specified pin
-      @param[out] degree Angle
-      @param pin Pin number
+      @brief Read the servo angle from the specified pin bits
+      @param[out] degrees Angle array of all pins
+      @param pin_bits Bits of the target pin
       @return True if successful
       @pre The mode of the specified pin must be Mode::ServoControl
       @warning degrees values for unspecified pins are undefined
@@ -427,10 +440,9 @@ public:
     bool readPinBitsServoAngle(uint8_t degrees[NUMBER_OF_PINS], const uint8_t pin_bits);
     /*!
       @brief Read the servo angle from all pins
-      @param[out] degree Angle
-      @param pin Pin number
+      @param[out] degrees Angle array of all pins
       @return True if successful
-      @pre The mode of all pin must be Mode::ServoControl
+      @pre The mode of all pins must be Mode::ServoControl
      */
     inline bool readAllServoAngle(uint8_t degrees[NUMBER_OF_PINS])
     {
@@ -471,7 +483,7 @@ public:
      */
     bool readServoPulse(uint16_t& pulse, const uint8_t pin);
     /*!
-      @brief Read the servo pulse from the specified pin
+      @brief Read the servo pulse from the specified pin bits
       @param[out] pulses Pulse array
       @param pin_bits Bits of the target pin
       @return True if successful
@@ -483,7 +495,7 @@ public:
       @brief Read the servo pulse from all pins
       @param[out] pulses Pulse array
       @return True if successful
-      @pre The mode of all pin must be Mode::ServoControl
+      @pre The mode of all pins must be Mode::ServoControl
      */
     inline bool readAllServoPulse(uint16_t pulses[NUMBER_OF_PINS])
     {
@@ -528,7 +540,7 @@ public:
      */
     bool readLEDColor(uint32_t& rgb888, const uint8_t pin);
     /*!
-      @brief Read the LED RGB888 from the specified pin
+      @brief Read the LED RGB888 from the specified pin bits
       @param[out] rgb888 RGB888 array
       @param pin_bits Bits of the target pin
       @return True if successful
@@ -555,7 +567,7 @@ public:
      */
     inline bool writeLEDColor(const uint8_t pin, const uint32_t rgb888)
     {
-        return writeLEDColor(pin, rgb888 >> 16, rgb888 > 8, rgb888 & 0xFF);
+        return writeLEDColor(pin, (rgb888 >> 16) & 0xFF, (rgb888 >> 8) & 0xFF, rgb888 & 0xFF);
     }
     /*!
       @brief Write the LED RGB888 to the specified pin
@@ -576,10 +588,10 @@ public:
      */
     inline bool writePinBitsLEDColor(const uint8_t pin_bits, const uint32_t rgb888)
     {
-        return writePinBitsLEDColor(pin_bits, rgb888 >> 16, rgb888 >> 8, rgb888 & 0xFF);
+        return writePinBitsLEDColor(pin_bits, (rgb888 >> 16) & 0xFF, (rgb888 >> 8) & 0xFF, rgb888 & 0xFF);
     }
     /*!
-      @brief Write the LED RGB888 to the specified pin
+      @brief Write the LED RGB888 to the specified pin bits
       @param pin_bits Bits of the target pin
       @param r Red
       @param g Green
@@ -612,59 +624,14 @@ public:
     }
     ///@}
 
-#if 0
-    ///@waring Only works with firmware V3 or later
-    ///@name PWM control
-    ///@{
-    /*!
-      @brief Read the PWM duty cycle
-      @param[out] cycle Duty cycle (0-100)
-      @param pin Pin number
-      @return True if successful
-      @pre The mode of the specified pin must be Mode::PWMControl
-      @waring Only works with firmware V3 or later
-     */
-    bool readPWMDutyCycle(uint8_t& cycle, const uint8_t pin);
-    /*!
-      @brief Read the PWM duty cycle from the specified pin
-      @param[out] cycles Duty cycle array
-      @param pin_bits Bits of the target pin
-      @return True if successful
-      @pre The mode of the specified pin must be Mode::PWMControl
-      @waring Only works with firmware V3 or later
-    */
-    bool readPinBitsPWMDutyCycle(uint8_t cycles[NUMBER_OF_PINS], const uint8_t pin_bits);
-    /*!
-      @brief Read the PWM duty cycle from all pins
-      @param[out] cycles Duty cycle array
-      @return True if successful
-      @pre The mode of the specified pin must be Mode::PWMControl
-      @waring Only works with firmware V3 or later
-    */
-    inline bool readAllPWMDutyCycle(uint8_t cycles[NUMBER_OF_PINS])
-    {
-        return readPinBitsPWMDutyCycle(cycles[NUMBER_OF_PINS], 0xFF);
-    }
-    bool writePWMDutyCycle(const uint8_t pin, const uint8_t cycle);
-    bool writePinBitsPWMDutyCycle(const uint8_t pin_bits, const uint8_t cycle);
-    inline bool writeAllPWMDutyCycle(uint8_t cycle)
-    {
-        return writePinBitsPWMDutyCycle(0xFF, cycle);
-    }
-    bool readPWMFrequency(extio2::PWM& freq);
-    bool writePWMFrequency(const extio2::PWM freq);
-    ///@}
-#endif
-
-    ///@warning Handling warning
-    ///@warning Repeated writing may cause partition damage
+    ///@warning Repeated writing may cause flash partition damage
     ///@name I2C Address
     ///@{
     /*!
       @brief Change device I2C address
       @param i2c_address I2C address
       @return True if successful
-      @warning Do not changee the I2C address configuration repeatedly at high frequency
+      @warning Do not change the I2C address configuration repeatedly at high frequency
     */
     bool changeI2CAddress(const uint8_t i2c_address);
     /*!

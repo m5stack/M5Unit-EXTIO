@@ -70,8 +70,8 @@ bool UnitExtIO2::readMode(extio2::Mode& mode, const uint8_t pin)
     }
 
     uint8_t v{};
-    if (readRegister8((uint8_t)(MODE_REG + pin), v, 0)) {
-        mode = static_cast<Mode>(v);
+    if (readRegister8(static_cast<uint8_t>(MODE_REG + pin), v, 0)) {
+        mode = is_valid_mode(static_cast<Mode>(v)) ? static_cast<Mode>(v) : Mode::Invalid;
         return true;
     }
     return false;
@@ -99,7 +99,7 @@ bool UnitExtIO2::writeMode(const uint8_t pin, const extio2::Mode mode)
         M5_LIB_LOGE("Invalid parameter pin:%u mode:%d", pin, mode);
         return false;
     }
-    if (writeRegister8((uint8_t)(MODE_REG + pin), m5::stl::to_underlying(mode))) {
+    if (writeRegister8(static_cast<uint8_t>(MODE_REG + pin), m5::stl::to_underlying(mode))) {
         _mode[pin] = mode;
         return true;
     }
@@ -141,7 +141,7 @@ bool UnitExtIO2::writeAllMode(const extio2::Mode mode[NUMBER_OF_PINS])
             M5_LIB_LOGE("Invalid mode included");
             return false;
         }
-        if (writeRegister(MODE_REG, (const uint8_t*)mode, NUMBER_OF_PINS)) {
+        if (writeRegister(MODE_REG, reinterpret_cast<const uint8_t*>(mode), NUMBER_OF_PINS)) {
             std::copy(mode, mode + NUMBER_OF_PINS, _mode.begin());
             return true;
         }
@@ -154,7 +154,7 @@ bool UnitExtIO2::readDigitalInput(bool& high, const uint8_t pin)
 {
     uint8_t v{};
     high = false;
-    if (mode(pin) == Mode::DigitalInput && readRegister8((uint8_t)(DIGITAL_INPUT_REG + pin), v, 0)) {
+    if (mode(pin) == Mode::DigitalInput && readRegister8(static_cast<uint8_t>(DIGITAL_INPUT_REG + pin), v, 0)) {
         high = v;
         return true;
     }
@@ -175,7 +175,7 @@ bool UnitExtIO2::readPinBitsDigitalInput(uint8_t& high_bits, const uint8_t pin_b
             if (!readDigitalInput(h, pin)) {
                 return false;
             }
-            high_bits |= (uint8_t)h << pin;
+            high_bits |= static_cast<uint8_t>(h) << pin;
         }
     }
     return true;
@@ -190,7 +190,7 @@ bool UnitExtIO2::readAllDigitalInput(uint8_t& high_bits)
 //
 bool UnitExtIO2::writeDigitalOutput(const uint8_t pin, const bool high)
 {
-    return (mode(pin) == Mode::DigitalOutput) && writeRegister8((uint8_t)(OUTPUT_CTL_REG + pin), high);
+    return (mode(pin) == Mode::DigitalOutput) && writeRegister8(static_cast<uint8_t>(OUTPUT_CTL_REG + pin), high);
 }
 
 bool UnitExtIO2::write_pin_bits_digital_output(const uint8_t pin_bits, const bool high)
@@ -227,28 +227,16 @@ bool UnitExtIO2::write_pin_bits_digital_output(const uint8_t pin_bits, const uin
     return true;
 }
 
-#if 0
-bool UnitExtIO2::writeAllDigitalOutput(const bool high)
-{
-    return std::all_of(_mode.begin(), _mode.end(), [](const Mode m) { return m == Mode::DigitalOutput; })
-               ? writeRegister8(OUTPUTS_CTL_REG, (uint8_t)high)
-               : false;
-}
-#endif
-
 //
 bool UnitExtIO2::readAnalogInput(uint16_t& value, const uint8_t pin, const extio2::AnalogMode amode)
 {
     value = 0;
 
-    union {
-        uint16_t v16;
-        uint8_t v8[2];
-    } buf{};
+    uint8_t buf[2]{};
     uint8_t reg = analog_input_reg_table[m5::stl::to_underlying(amode)] + pin * (1 + m5::stl::to_underlying(amode));
 
-    if (mode(pin) == Mode::ADCInput && readRegister(reg, buf.v8, 1 + m5::stl::to_underlying(amode), 0)) {
-        value = buf.v16;
+    if (mode(pin) == Mode::ADCInput && readRegister(reg, buf, 1 + m5::stl::to_underlying(amode), 0)) {
+        value = (amode == AnalogMode::Bits8) ? buf[0] : (buf[0] | (static_cast<uint16_t>(buf[1]) << 8));
         return true;
     }
     return false;
@@ -281,7 +269,8 @@ bool UnitExtIO2::readPinBitsAnalogInput(uint16_t values[NUMBER_OF_PINS], const u
 bool UnitExtIO2::readServoAngle(uint8_t& degree, const uint8_t pin)
 {
     degree = 0;
-    return mode(pin) == Mode::ServoControl && readRegister8((uint8_t)(SERVO_ANGLE_8BITS_REG + pin), degree, 0);
+    return mode(pin) == Mode::ServoControl &&
+           readRegister8(static_cast<uint8_t>(SERVO_ANGLE_8BITS_REG + pin), degree, 0);
 }
 
 bool UnitExtIO2::readPinBitsServoAngle(uint8_t degrees[NUMBER_OF_PINS], const uint8_t pin_bits)
@@ -315,7 +304,7 @@ bool UnitExtIO2::writeServoAngle(const uint8_t pin, const uint8_t degree)
         return false;
     }
 #pragma GCC diagnostic pop
-    return mode(pin) == Mode::ServoControl && writeRegister8((uint8_t)(SERVO_ANGLE_8BITS_REG + pin), degree);
+    return mode(pin) == Mode::ServoControl && writeRegister8(static_cast<uint8_t>(SERVO_ANGLE_8BITS_REG + pin), degree);
 }
 
 bool UnitExtIO2::writePinBitsServoAngle(const uint8_t pin_bits, const uint8_t degree)
@@ -338,7 +327,8 @@ bool UnitExtIO2::writePinBitsServoAngle(const uint8_t pin_bits, const uint8_t de
 bool UnitExtIO2::readServoPulse(uint16_t& pulse, const uint8_t pin)
 {
     pulse = 0;
-    return mode(pin) == Mode::ServoControl && readRegister16LE((uint8_t)(SERVO_PULSE_16BITS_REG + pin * 2), pulse, 0);
+    return mode(pin) == Mode::ServoControl &&
+           readRegister16LE(static_cast<uint8_t>(SERVO_PULSE_16BITS_REG + pin * 2), pulse, 0);
 }
 
 bool UnitExtIO2::readPinBitsServoPulse(uint16_t pulses[NUMBER_OF_PINS], const uint8_t pin_bits)
@@ -369,7 +359,8 @@ bool UnitExtIO2::writeServoPulse(const uint8_t pin, const uint16_t pulse)
         M5_LIB_LOGE("Valid range %u - %u, %u", MIN_SERVO_PULSE, MAX_SERVO_PULSE, pulse);
         return false;
     }
-    return mode(pin) == Mode::ServoControl && writeRegister16LE((uint8_t)(SERVO_PULSE_16BITS_REG + pin * 2), pulse);
+    return mode(pin) == Mode::ServoControl &&
+           writeRegister16LE(static_cast<uint8_t>(SERVO_PULSE_16BITS_REG + pin * 2), pulse);
 }
 
 bool UnitExtIO2::writePinBitsServoPulse(const uint8_t pin_bits, const uint16_t pulse)
@@ -394,8 +385,8 @@ bool UnitExtIO2::readLEDColor(uint32_t& rgb888, const uint8_t pin)
 {
     rgb888 = 0;
     uint8_t rbuf[3]{};
-    if (mode(pin) == Mode::LEDControl && readRegister((uint8_t)(RGB_24BITS_REG + pin * 3), rbuf, 3, 1)) {
-        rgb888 = ((uint32_t)rbuf[0] << 16) | ((uint32_t)rbuf[1] << 8) | rbuf[2];
+    if (mode(pin) == Mode::LEDControl && readRegister(static_cast<uint8_t>(RGB_24BITS_REG + pin * 3), rbuf, 3, 1)) {
+        rgb888 = (static_cast<uint32_t>(rbuf[0]) << 16) | (static_cast<uint32_t>(rbuf[1]) << 8) | rbuf[2];
         return true;
     }
     return false;
@@ -421,13 +412,13 @@ bool UnitExtIO2::readPinBitsLEDColor(uint32_t rgb888[NUMBER_OF_PINS], const uint
     return false;
 }
 
-bool UnitExtIO2::writeLEDColor(const uint8_t pin, const uint8_t r, uint8_t g, uint8_t b)
+bool UnitExtIO2::writeLEDColor(const uint8_t pin, const uint8_t r, const uint8_t g, const uint8_t b)
 {
     uint8_t buf[3]{r, g, b};
-    return mode(pin) == Mode::LEDControl && writeRegister((uint8_t)(RGB_24BITS_REG + pin * 3), buf, 3);
+    return mode(pin) == Mode::LEDControl && writeRegister(static_cast<uint8_t>(RGB_24BITS_REG + pin * 3), buf, 3);
 }
 
-bool UnitExtIO2::writePinBitsLEDColor(const uint8_t pin_bits, const uint8_t r, uint8_t g, uint8_t b)
+bool UnitExtIO2::writePinBitsLEDColor(const uint8_t pin_bits, const uint8_t r, const uint8_t g, const uint8_t b)
 {
     if (pin_bits == 0) {
         M5_LIB_LOGE("Target not specified");

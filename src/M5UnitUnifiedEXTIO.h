@@ -5,7 +5,7 @@
  */
 /*!
   @file M5UnitUnifiedEXTIO.h
-  @brief Main header of M5UnitEXTIO using M5UnitUnfied
+  @brief Main header of M5UnitEXTIO using M5UnitUnified
 */
 #ifndef M5_UNIT_UNIFIED_EXTIO_H
 #define M5_UNIT_UNIFIED_EXTIO_H

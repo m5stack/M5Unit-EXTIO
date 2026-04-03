@@ -28,44 +28,36 @@ std::ostream& operator<<(std::ostream& os, const std::array<T, N>& arr)
 #include <googletest/test_template.hpp>
 #include <googletest/test_helper.hpp>
 #include <unit/unit_ExtIO2.hpp>
-#include <cmath>
-#include <random>
+#include <esp_random.h>
 
 using namespace m5::unit::googletest;
 using namespace m5::unit;
 using namespace m5::unit::extio2;
 using m5::unit::types::elapsed_time_t;
 
-const ::testing::Environment* global_fixture = ::testing::AddGlobalTestEnvironment(new GlobalFixture<100000U>());
-
-class TestExtIO2 : public ComponentTestBase<UnitExtIO2, bool> {
+class TestExtIO2 : public I2CComponentTestBase<UnitExtIO2> {
 protected:
     virtual UnitExtIO2* get_instance() override
     {
         auto ptr = new m5::unit::UnitExtIO2();
         return ptr;
     }
-    virtual bool is_using_hal() const override
-    {
-        return GetParam();
-    };
 };
-
-// INSTANTIATE_TEST_SUITE_P(ParamValues, TestExtIO2, ::testing::Values(false, true));
-// INSTANTIATE_TEST_SUITE_P(ParamValues, TestExtIO2, ::testing::Values(true));
-INSTANTIATE_TEST_SUITE_P(ParamValues, TestExtIO2, ::testing::Values(false));
 
 namespace {
 
-auto rng = std::default_random_engine{};
-std::uniform_int_distribution<> dist_angle{UnitExtIO2::MIN_SERVO_ANGLE, UnitExtIO2::MAX_SERVO_ANGLE};
-std::uniform_int_distribution<> dist_pulse{UnitExtIO2::MIN_SERVO_PULSE, UnitExtIO2::MAX_SERVO_PULSE};
+uint8_t random_servo_angle()
+{
+    return esp_random() % (UnitExtIO2::MAX_SERVO_ANGLE - UnitExtIO2::MIN_SERVO_ANGLE + 1) + UnitExtIO2::MIN_SERVO_ANGLE;
+}
+uint16_t random_servo_pulse()
+{
+    return esp_random() % (UnitExtIO2::MAX_SERVO_PULSE - UnitExtIO2::MIN_SERVO_PULSE + 1) + UnitExtIO2::MIN_SERVO_PULSE;
+}
 
 constexpr Mode mode_table[] = {
     Mode::DigitalInput, Mode::DigitalOutput, Mode::ADCInput, Mode::ServoControl, Mode::LEDControl,
 };
-
-constexpr AnalogMode amode_table[] = {AnalogMode::Bits8, AnalogMode::Bits12};
 
 constexpr uint8_t pin_bits_table[] = {
     0x00,  // All off
@@ -127,7 +119,7 @@ bool check_values_eq(const std::array<T, N>& arr, const uint8_t pin_bits, const 
 
 }  // namespace
 
-TEST_P(TestExtIO2, FirmwareVersion)
+TEST_F(TestExtIO2, FirmwareVersion)
 {
     SCOPED_TRACE(ustr);
 
@@ -137,7 +129,7 @@ TEST_P(TestExtIO2, FirmwareVersion)
     EXPECT_NE(ver, 0);
 }
 
-TEST_P(TestExtIO2, Mode)
+TEST_F(TestExtIO2, Mode)
 {
     SCOPED_TRACE(ustr);
 
@@ -192,23 +184,33 @@ TEST_P(TestExtIO2, Mode)
         }
     }
 
-    // All
+    // All (single Mode)
     for (auto&& m : mode_table) {
         EXPECT_TRUE(unit->writeAllMode(m));
-        for (uint8_t pin = 0; pin < UnitExtIO2::NUMBER_OF_PINS; ++pin) {
-            Mode mm{};
-            Mode ma[UnitExtIO2::NUMBER_OF_PINS]{};
-            EXPECT_TRUE(unit->readMode(mm, pin));
-            EXPECT_EQ(mm, m);
-            EXPECT_EQ(unit->mode(pin), m);
 
-            EXPECT_TRUE(unit->readAllMode(ma));
-            EXPECT_TRUE(std::all_of(std::begin(ma), std::end(ma), [&m](const Mode md) { return md == m; }));
+        Mode ma[UnitExtIO2::NUMBER_OF_PINS]{};
+        EXPECT_TRUE(unit->readAllMode(ma));
+        EXPECT_TRUE(std::all_of(std::begin(ma), std::end(ma), [&m](const Mode md) { return md == m; }));
+
+        for (uint8_t pin = 0; pin < UnitExtIO2::NUMBER_OF_PINS; ++pin) {
+            EXPECT_EQ(unit->mode(pin), m);
         }
+    }
+
+    // All (Mode array)
+    {
+        Mode arr[UnitExtIO2::NUMBER_OF_PINS] = {
+            Mode::DigitalInput, Mode::DigitalOutput, Mode::ADCInput,      Mode::ServoControl,
+            Mode::LEDControl,   Mode::DigitalInput,  Mode::DigitalOutput, Mode::ADCInput,
+        };
+        EXPECT_TRUE(unit->writeAllMode(arr));
+        Mode ra[UnitExtIO2::NUMBER_OF_PINS]{};
+        EXPECT_TRUE(unit->readAllMode(ra));
+        EXPECT_TRUE(std::equal(std::begin(arr), std::end(arr), std::begin(ra)));
     }
 }
 
-TEST_P(TestExtIO2, DigitalInput)
+TEST_F(TestExtIO2, DigitalInput)
 {
     SCOPED_TRACE(ustr);
 
@@ -230,7 +232,7 @@ TEST_P(TestExtIO2, DigitalInput)
     }
 }
 
-TEST_P(TestExtIO2, DigitalOutput)
+TEST_F(TestExtIO2, DigitalOutput)
 {
     SCOPED_TRACE(ustr);
 
@@ -254,7 +256,7 @@ TEST_P(TestExtIO2, DigitalOutput)
     }
 }
 
-TEST_P(TestExtIO2, ADCInput)
+TEST_F(TestExtIO2, ADCInput)
 {
     SCOPED_TRACE(ustr);
 
@@ -280,7 +282,7 @@ TEST_P(TestExtIO2, ADCInput)
     }
 }
 
-TEST_P(TestExtIO2, ServoControl)
+TEST_F(TestExtIO2, ServoControl)
 {
     SCOPED_TRACE(ustr);
 
@@ -293,10 +295,24 @@ TEST_P(TestExtIO2, ServoControl)
     EXPECT_FALSE(unit->writeAllServoAngle(0));
     EXPECT_FALSE(unit->writeAllServoPulse(0));
 
-    for (auto&& pin_bits : pin_bits_table) {
-        std::array<uint8_t, UnitExtIO2::NUMBER_OF_PINS> angles{};
-        std::array<uint16_t, UnitExtIO2::NUMBER_OF_PINS> pulses{};
+    // Boundary values (once with all pins)
+    EXPECT_TRUE(unit->writeAllMode(Mode::ServoControl));
+    EXPECT_TRUE(unit->writePinBitsServoAngle(0xFF, 0));
+    EXPECT_TRUE(unit->writePinBitsServoAngle(0xFF, 90));
+    EXPECT_TRUE(unit->writePinBitsServoAngle(0xFF, 180));
+    EXPECT_FALSE(unit->writePinBitsServoAngle(0xFF, 181));
+    EXPECT_FALSE(unit->writePinBitsServoAngle(0xFF, 255));
 
+    EXPECT_FALSE(unit->writePinBitsServoPulse(0xFF, 0));
+    EXPECT_FALSE(unit->writePinBitsServoPulse(0xFF, 499));
+    EXPECT_TRUE(unit->writePinBitsServoPulse(0xFF, 500));
+    EXPECT_TRUE(unit->writePinBitsServoPulse(0xFF, 1500));
+    EXPECT_TRUE(unit->writePinBitsServoPulse(0xFF, 2500));
+    EXPECT_FALSE(unit->writePinBitsServoPulse(0xFF, 2501));
+    EXPECT_FALSE(unit->writePinBitsServoPulse(0xFF, 65535));
+
+    // Write/read with various pin patterns
+    for (auto&& pin_bits : pin_bits_table) {
         auto s = m5::utility::formatString("PIN:%X", pin_bits);
         SCOPED_TRACE(s);
         if (!pin_bits) {
@@ -304,35 +320,26 @@ TEST_P(TestExtIO2, ServoControl)
         }
         EXPECT_TRUE(unit->writePinBitsMode(pin_bits, Mode::ServoControl));
 
-        //
-        EXPECT_TRUE(unit->writePinBitsServoAngle(pin_bits, 0));
-        EXPECT_TRUE(unit->writePinBitsServoAngle(pin_bits, 90));
-        EXPECT_TRUE(unit->writePinBitsServoAngle(pin_bits, 180));
-        EXPECT_FALSE(unit->writePinBitsServoAngle(pin_bits, 181));
-        EXPECT_FALSE(unit->writePinBitsServoAngle(pin_bits, 255));
-
-        EXPECT_FALSE(unit->writePinBitsServoPulse(pin_bits, 0));
-        EXPECT_FALSE(unit->writePinBitsServoPulse(pin_bits, 499));
-        EXPECT_TRUE(unit->writePinBitsServoPulse(pin_bits, 500));
-        EXPECT_TRUE(unit->writePinBitsServoPulse(pin_bits, 1500));
-        EXPECT_TRUE(unit->writePinBitsServoPulse(pin_bits, 2500));
-        EXPECT_FALSE(unit->writePinBitsServoPulse(pin_bits, 2501));
-        EXPECT_FALSE(unit->writePinBitsServoPulse(pin_bits, 65535));
-
-        uint8_t deg = dist_angle(rng);
+        uint8_t deg = random_servo_angle();
+        auto ds     = m5::utility::formatString("Angle:%u", deg);
+        SCOPED_TRACE(ds);
         EXPECT_TRUE(unit->writePinBitsServoAngle(pin_bits, deg));
-        EXPECT_TRUE(unit->readPinBitsServoAngle(angles.data(), pin_bits));
-        EXPECT_TRUE(check_values_eq(angles, pin_bits, deg)) << deg << " array:" << angles;
+        std::array<uint8_t, UnitExtIO2::NUMBER_OF_PINS> ra{};
+        EXPECT_TRUE(unit->readPinBitsServoAngle(ra.data(), pin_bits));
+        EXPECT_TRUE(check_values_eq(ra, pin_bits, deg)) << ra;
 
-        uint16_t pls = dist_pulse(rng);
+        uint16_t pls = random_servo_pulse();
+        auto ps      = m5::utility::formatString("Pulse:%u", pls);
+        SCOPED_TRACE(ps);
         EXPECT_TRUE(unit->writePinBitsServoPulse(pin_bits, pls));
-        EXPECT_TRUE(unit->readPinBitsServoPulse(pulses.data(), pin_bits));
+        std::array<uint16_t, UnitExtIO2::NUMBER_OF_PINS> rp{};
+        EXPECT_TRUE(unit->readPinBitsServoPulse(rp.data(), pin_bits));
         // pulse internally stores the value divided by 10
-        EXPECT_TRUE(check_values_eq(pulses, pin_bits, (uint16_t)(pls / 10 * 10))) << pls << " array:" << pulses;
+        EXPECT_TRUE(check_values_eq(rp, pin_bits, (uint16_t)(pls / 10 * 10))) << rp;
     }
 }
 
-TEST_P(TestExtIO2, LEDControl)
+TEST_F(TestExtIO2, LEDControl)
 {
     SCOPED_TRACE(ustr);
 
@@ -342,7 +349,7 @@ TEST_P(TestExtIO2, LEDControl)
     EXPECT_FALSE(unit->writeAllLEDColor(0xFF00FF));
 
     for (auto&& pin_bits : pin_bits_table) {
-        uint32_t color = rng() & 0xFFFFFF;
+        uint32_t color = esp_random() & 0xFFFFFF;
         auto s         = m5::utility::formatString("PIN:%X Clr:%X", pin_bits, color);
         SCOPED_TRACE(s);
         if (!pin_bits) {
@@ -358,11 +365,124 @@ TEST_P(TestExtIO2, LEDControl)
     }
 }
 
+TEST_F(TestExtIO2, SinglePinADC)
+{
+    SCOPED_TRACE(ustr);
+
+    EXPECT_TRUE(unit->writeAllMode(Mode::ADCInput));
+
+    for (uint8_t pin = 0; pin < UnitExtIO2::NUMBER_OF_PINS; ++pin) {
+        auto s = m5::utility::formatString("PIN:%u", pin);
+        SCOPED_TRACE(s);
+
+        uint16_t v8{}, v12{};
+        EXPECT_TRUE(unit->readAnalogInput8(v8, pin));
+        EXPECT_LE(v8, +UnitExtIO2::MAX_ANALOG_8);
+        EXPECT_TRUE(unit->readAnalogInput12(v12, pin));
+        EXPECT_LE(v12, +UnitExtIO2::MAX_ANALOG_12);
+    }
+
+    // Wrong mode
+    EXPECT_TRUE(unit->writeMode(0, Mode::DigitalInput));
+    uint16_t dummy{};
+    EXPECT_FALSE(unit->readAnalogInput8(dummy, 0));
+    EXPECT_FALSE(unit->readAnalogInput12(dummy, 0));
+}
+
+TEST_F(TestExtIO2, SinglePinServo)
+{
+    SCOPED_TRACE(ustr);
+
+    EXPECT_TRUE(unit->writeAllMode(Mode::ServoControl));
+
+    for (uint8_t pin = 0; pin < UnitExtIO2::NUMBER_OF_PINS; ++pin) {
+        auto s = m5::utility::formatString("PIN:%u", pin);
+        SCOPED_TRACE(s);
+
+        uint8_t deg = random_servo_angle();
+        EXPECT_TRUE(unit->writeServoAngle(pin, deg));
+        uint8_t rd{};
+        EXPECT_TRUE(unit->readServoAngle(rd, pin));
+        EXPECT_EQ(rd, deg);
+
+        uint16_t pls = random_servo_pulse();
+        EXPECT_TRUE(unit->writeServoPulse(pin, pls));
+        uint16_t rp{};
+        EXPECT_TRUE(unit->readServoPulse(rp, pin));
+        EXPECT_EQ(rp, (uint16_t)(pls / 10 * 10));
+    }
+
+    // Wrong mode
+    EXPECT_TRUE(unit->writeMode(0, Mode::DigitalInput));
+    EXPECT_FALSE(unit->writeServoAngle(0, 90));
+    EXPECT_FALSE(unit->writeServoPulse(0, 1500));
+    uint8_t da{};
+    uint16_t dp{};
+    EXPECT_FALSE(unit->readServoAngle(da, 0));
+    EXPECT_FALSE(unit->readServoPulse(dp, 0));
+}
+
+TEST_F(TestExtIO2, SinglePinLED)
+{
+    SCOPED_TRACE(ustr);
+
+    EXPECT_TRUE(unit->writeAllMode(Mode::LEDControl));
+
+    for (uint8_t pin = 0; pin < UnitExtIO2::NUMBER_OF_PINS; ++pin) {
+        auto s = m5::utility::formatString("PIN:%u", pin);
+        SCOPED_TRACE(s);
+
+        // rgb888 overload
+        uint32_t color = esp_random() & 0xFFFFFF;
+        EXPECT_TRUE(unit->writeLEDColor(pin, color));
+        uint32_t rc{};
+        EXPECT_TRUE(unit->readLEDColor(rc, pin));
+        EXPECT_EQ(rc, color) << m5::utility::formatString("wrote:0x%06X read:0x%06X", color, rc);
+
+        // r, g, b overload
+        uint8_t r = esp_random() & 0xFF;
+        uint8_t g = esp_random() & 0xFF;
+        uint8_t b = esp_random() & 0xFF;
+        EXPECT_TRUE(unit->writeLEDColor(pin, r, g, b));
+        EXPECT_TRUE(unit->readLEDColor(rc, pin));
+        uint32_t expected = ((uint32_t)r << 16) | ((uint32_t)g << 8) | b;
+        EXPECT_EQ(rc, expected) << m5::utility::formatString("wrote:0x%06X read:0x%06X", expected, rc);
+    }
+
+    // Wrong mode
+    EXPECT_TRUE(unit->writeMode(0, Mode::DigitalInput));
+    uint32_t dc{};
+    EXPECT_FALSE(unit->readLEDColor(dc, 0));
+    EXPECT_FALSE(unit->writeLEDColor(0, 0xFF0000U));
+    EXPECT_FALSE(unit->writeLEDColor(0, 0xFF, 0x00, 0x00));
+}
+
+TEST_F(TestExtIO2, PinBitsLEDColorRGB)
+{
+    SCOPED_TRACE(ustr);
+
+    EXPECT_TRUE(unit->writeAllMode(Mode::LEDControl));
+
+    uint8_t r         = esp_random() & 0xFF;
+    uint8_t g         = esp_random() & 0xFF;
+    uint8_t b         = esp_random() & 0xFF;
+    uint32_t expected = ((uint32_t)r << 16) | ((uint32_t)g << 8) | b;
+
+    EXPECT_TRUE(unit->writePinBitsLEDColor(0xFF, r, g, b));
+    std::array<uint32_t, UnitExtIO2::NUMBER_OF_PINS> colors{};
+    EXPECT_TRUE(unit->readPinBitsLEDColor(colors.data(), 0xFF));
+    EXPECT_TRUE(check_values_eq(colors, (uint8_t)0xFF, expected)) << colors;
+
+    EXPECT_TRUE(unit->writeAllLEDColor(r, g, b));
+    EXPECT_TRUE(unit->readAllLEDColor(colors.data()));
+    EXPECT_TRUE(check_values_eq(colors, (uint8_t)0xFF, expected)) << colors;
+}
+
 /*
   WARNING!!
   Failure of this test will result in an unexpected I2C address being set!
 */
-TEST_P(TestExtIO2, I2CAddress)
+TEST_F(TestExtIO2, I2CAddress)
 {
     SCOPED_TRACE(ustr);
 
@@ -380,7 +500,6 @@ TEST_P(TestExtIO2, I2CAddress)
 
     EXPECT_TRUE(unit->readFirmwareVersion(ver));
     EXPECT_NE(ver, 0x00);
-    m5::utility::delay(1000);
 
     // Change to 0x77
     EXPECT_TRUE(unit->changeI2CAddress(0x77));
@@ -390,7 +509,6 @@ TEST_P(TestExtIO2, I2CAddress)
 
     EXPECT_TRUE(unit->readFirmwareVersion(ver));
     EXPECT_NE(ver, 0x00);
-    m5::utility::delay(1000);
 
     // Change to 0x52
     EXPECT_TRUE(unit->changeI2CAddress(0x52));
@@ -400,7 +518,6 @@ TEST_P(TestExtIO2, I2CAddress)
 
     EXPECT_TRUE(unit->readFirmwareVersion(ver));
     EXPECT_NE(ver, 0x00);
-    m5::utility::delay(1000);
 
     // Change to default
     EXPECT_TRUE(unit->changeI2CAddress(UnitExtIO2::DEFAULT_ADDRESS));
@@ -410,4 +527,47 @@ TEST_P(TestExtIO2, I2CAddress)
 
     EXPECT_TRUE(unit->readFirmwareVersion(ver));
     EXPECT_NE(ver, 0x00);
+}
+
+// begin() config application test
+struct BeginConfigParams {
+    bool apply_mode;
+    Mode mode;
+};
+
+class TestExtIO2BeginConfig : public I2CComponentTestBase<UnitExtIO2>,
+                              public ::testing::WithParamInterface<BeginConfigParams> {
+protected:
+    virtual UnitExtIO2* get_instance() override
+    {
+        auto ptr = new UnitExtIO2();
+        if (ptr) {
+            auto cfg       = ptr->config();
+            cfg.apply_mode = GetParam().apply_mode;
+            std::fill(std::begin(cfg.mode), std::end(cfg.mode), GetParam().mode);
+            ptr->config(cfg);
+        }
+        return ptr;
+    }
+};
+
+INSTANTIATE_TEST_SUITE_P(ConfigValues, TestExtIO2BeginConfig,
+                         ::testing::Values(BeginConfigParams{true, Mode::DigitalInput},
+                                           BeginConfigParams{true, Mode::ADCInput},
+                                           BeginConfigParams{false, Mode::ADCInput}));
+
+TEST_P(TestExtIO2BeginConfig, BeginAppliesConfig)
+{
+    SCOPED_TRACE(ustr);
+    const auto& p = GetParam();
+
+    std::array<Mode, UnitExtIO2::NUMBER_OF_PINS> modes{};
+    EXPECT_TRUE(unit->readAllMode(modes.data()));
+
+    if (p.apply_mode) {
+        for (uint8_t i = 0; i < UnitExtIO2::NUMBER_OF_PINS; ++i) {
+            EXPECT_EQ(modes[i], p.mode) << "pin " << +i;
+        }
+    }
+    // apply_mode == false: device retains its existing modes, just verify read succeeds
 }

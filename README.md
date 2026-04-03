@@ -13,7 +13,7 @@ EXT.IO2 is an IO extended unit, based on STM32F030 main controller, using I2C co
 ## Future Plans
 - EXTIO2 firmware V3 function (PWM control) is not yet supported.  
 It will be supported in the next update.
-- Unit EXT.IO(SKU:U011) will support soon.
+- Unit EXT.IO(SKU:U011) will be supported soon.
 
 
 ## Related Link
