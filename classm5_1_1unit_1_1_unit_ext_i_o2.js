@@ -1,6 +1,9 @@
 var classm5_1_1unit_1_1_unit_ext_i_o2 =
 [
     [ "config_t", "structm5_1_1unit_1_1_unit_ext_i_o2_1_1config__t.html", "structm5_1_1unit_1_1_unit_ext_i_o2_1_1config__t" ],
+    [ "UnitExtIO2", "classm5_1_1unit_1_1_unit_ext_i_o2.html#a52079e8652ae69c8f2fade58e1dbaf31", null ],
+    [ "~UnitExtIO2", "classm5_1_1unit_1_1_unit_ext_i_o2.html#ac8c7b8ebe0af702c8e59fe1559ddd05f", null ],
+    [ "begin", "classm5_1_1unit_1_1_unit_ext_i_o2.html#a0efa23f1b9d7e7b6e8ba1b6599754199", null ],
     [ "changeI2CAddress", "classm5_1_1unit_1_1_unit_ext_i_o2.html#a8b9efa675acfe6acc705d454ead4f651", null ],
     [ "config", "classm5_1_1unit_1_1_unit_ext_i_o2.html#ac62fb106b8b4c67cc91a11df48a41832", null ],
     [ "config", "classm5_1_1unit_1_1_unit_ext_i_o2.html#ab44a938c3dadbb2482835f4957f4e56f", null ],
