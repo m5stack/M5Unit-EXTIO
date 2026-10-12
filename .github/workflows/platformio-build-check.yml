@@ -103,6 +103,31 @@ jobs:
             board: Core
             framework: Arduino
             espressif32: latest
+          - example: ViaPaHub
+            unit: UnitExtIO2
+            framework: Arduino
+            espressif32: latest
+            board: Core
+          - example: ViaPaHub
+            unit: UnitExtIO2
+            framework: Arduino
+            espressif32: latest
+            board: CoreS3
+          - example: ViaPaHub
+            unit: UnitExtIO2
+            framework: Arduino
+            espressif32: latest
+            board: NanoC6
+          - example: ViaPaHub
+            unit: UnitExtIO2
+            framework: Arduino
+            espressif32: latest
+            board: NanoH2
+          - example: ViaPaHub
+            unit: UnitExtIO2
+            framework: Arduino
+            espressif32: latest
+            board: Tab5
 
     steps:
       - name: Checkout

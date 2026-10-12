@@ -33,6 +33,15 @@ See also examples using conventional methods here.
 ## Examples
 See also [examples/UnitUnified](examples/UnitUnified)
 
+## Support via [PaHub](https://docs.m5stack.com/en/unit/Unit-PaHub%20v2.1)
+
+|Unit|Support|Note|
+|---|---|---|
+|UnitExtIO2|OK||
+
+UnitExtIO2 units share the same default address (0x45), so they can be used at the same time by connecting each to a different PaHub channel.
+See also the [ViaPaHub](examples/UnitUnified/UnitExtIO2/ViaPaHub) example and [M5Unit-HUB](https://github.com/m5stack/M5Unit-HUB)
+
 ## Firmware for SKU:U011-B
 See also https://github.com/m5stack/M5Unit-EXTIO2-Internal-FW
 
