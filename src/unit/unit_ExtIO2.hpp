@@ -335,7 +335,7 @@ public:
       @param[out] value Value
       @param pin Pin number
       @param amode Data width
-      @return True if successful
+      @return True if successful, false if amode is invalid
       @pre The mode of the specified pin must be Mode::ADCInput
      */
     bool readAnalogInput(uint16_t& value, const uint8_t pin, const extio2::AnalogMode amode);
@@ -366,7 +366,7 @@ public:
       @param[out] values Value array
       @param pin_bits Bits of the target pin
       @param amode Data width
-      @return True if successful
+      @return True if successful, false if amode is invalid
       @pre The mode of the specified pin must be Mode::ADCInput
       @note Elements of pins not in pin_bits are set to 0
      */
@@ -400,7 +400,7 @@ public:
       @brief Read the analog input from all pins
       @param[out] values Value array
       @param amode Data width
-      @return True if successful
+      @return True if successful, false if amode is invalid
       @pre The mode of all pins must be Mode::ADCInput
      */
     inline bool readAllAnalogInput(uint16_t values[NUMBER_OF_PINS], const extio2::AnalogMode amode)
@@ -439,6 +439,7 @@ public:
       @param pin Pin number
       @return True if successful
       @pre The mode of the specified pin must be Mode::ServoControl
+      @note degree is 255 if no angle has been written to the pin yet
      */
     bool readServoAngle(uint8_t& degree, const uint8_t pin);
     /*!
@@ -448,6 +449,7 @@ public:
       @return True if successful
       @pre The mode of the specified pin must be Mode::ServoControl
       @note Elements of pins not in pin_bits are set to 0
+      @note degrees is 255 for pins to which no angle has been written yet
      */
     bool readPinBitsServoAngle(uint8_t degrees[NUMBER_OF_PINS], const uint8_t pin_bits);
     /*!
@@ -455,6 +457,7 @@ public:
       @param[out] degrees Angle array of all pins
       @return True if successful
       @pre The mode of all pins must be Mode::ServoControl
+      @note degrees is 255 for pins to which no angle has been written yet
      */
     inline bool readAllServoAngle(uint8_t degrees[NUMBER_OF_PINS])
     {
@@ -493,6 +496,7 @@ public:
       @param pin Pin number
       @return True if successful
       @pre The mode of the specified pin must be Mode::ServoControl
+      @note pulse is 65535 if no pulse has been written to the pin yet
      */
     bool readServoPulse(uint16_t& pulse, const uint8_t pin);
     /*!
@@ -502,6 +506,7 @@ public:
       @return True if successful
       @pre The mode of the specified pin must be Mode::ServoControl
       @note Elements of pins not in pin_bits are set to 0
+      @note pulses is 65535 for pins to which no pulse has been written yet
      */
     bool readPinBitsServoPulse(uint16_t pulses[NUMBER_OF_PINS], const uint8_t pin_bits);
     /*!
@@ -509,6 +514,7 @@ public:
       @param[out] pulses Pulse array
       @return True if successful
       @pre The mode of all pins must be Mode::ServoControl
+      @note pulses is 65535 for pins to which no pulse has been written yet
      */
     inline bool readAllServoPulse(uint16_t pulses[NUMBER_OF_PINS])
     {

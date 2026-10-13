@@ -264,6 +264,16 @@ TEST_F(TestExtIO2, ADCInput)
 
     std::array<uint16_t, UnitExtIO2::NUMBER_OF_PINS> values{};
 
+    // Invalid analog mode
+    {
+        EXPECT_TRUE(unit->writeMode(0, Mode::ADCInput));
+        uint16_t v{0xFFFF};
+        EXPECT_FALSE(unit->readAnalogInput(v, 0, static_cast<AnalogMode>(2)));
+        EXPECT_EQ(v, 0U);
+        EXPECT_FALSE(unit->readPinBitsAnalogInput(values.data(), 0x01, static_cast<AnalogMode>(2)));
+        EXPECT_TRUE(unit->readAnalogInput(v, 0, AnalogMode::Bits12));
+    }
+
     EXPECT_TRUE(unit->writeMode(0, Mode::DigitalInput));
     EXPECT_FALSE(unit->readAllAnalogInput8(values.data()));
     EXPECT_FALSE(unit->readAllAnalogInput12(values.data()));

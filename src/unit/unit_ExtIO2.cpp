@@ -231,6 +231,10 @@ bool UnitExtIO2::write_pin_bits_digital_output(const uint8_t pin_bits, const uin
 bool UnitExtIO2::readAnalogInput(uint16_t& value, const uint8_t pin, const extio2::AnalogMode amode)
 {
     value = 0;
+    if (amode > AnalogMode::Bits12) {
+        M5_LIB_LOGE("Invalid analog mode %u", m5::stl::to_underlying(amode));
+        return false;
+    }
 
     uint8_t buf[2]{};
     const uint8_t reg{static_cast<uint8_t>(analog_input_reg_table[m5::stl::to_underlying(amode)] +
