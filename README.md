@@ -7,7 +7,7 @@ M5UnitUnified is a library for unified handling of various M5 units products.
 
 ### SKU:U011-B
 
-EXT.IO2 is an IO extended unit, based on STM32F030 main controller, using I2C communication interface and providing 8 IO expansion. Each IO supports independent configuration of digital I/O, ADC, SERVO control, RGB LED control modes. Supports configuration of device I2C address, which means that users can mount multiple EXT.IO2 UNITs on the same I2C BUS to extend more IO resources. Suitable for multiple digital/analog signal acquisition, with lighting/servo control applications.
+Unit EXT.IO2 is an IO expansion unit developed based on the STM32F030 main controller, using an I2C communication interface, providing 8-channel IO expansion. Each IO channel supports independent configuration of digital input/output, ADC, SERVO control, and RGB LED control modes. It supports configuring the device's I2C address, which means users can mount multiple Unit EXT.IO2 units on the same I2C bus to expand more IO resources. It is suitable for applications such as multi-channel digital/analog signal acquisition and light/servo control.
 
 
 ## Future Plans
@@ -17,11 +17,11 @@ It will be supported in the next update.
 
 
 ## Related Link
-See also examples using conventional methods here.
 
 - [Unit EXT.IO2 & Datasheet](https://docs.m5stack.com/en/unit/extio2)
 
-### Required Libraries:
+## Required Libraries
+
 - [M5UnitUnified](https://github.com/m5stack/M5UnitUnified)
 - [M5Utility](https://github.com/m5stack/M5Utility)
 - [M5HAL](https://github.com/m5stack/M5HAL)
@@ -57,7 +57,7 @@ See also the [ViaPaHub](examples/UnitUnified/UnitExtIO2/ViaPaHub) example and [M
 ## Firmware for SKU:U011-B
 See also https://github.com/m5stack/M5Unit-EXTIO2-Internal-FW
 
-### Doxygen document
+## Doxygen document
 [GitHub Pages](https://m5stack.github.io/M5Unit-EXTIO/)
 
 If you want to generate documents on your local machine, execute the following command
@@ -69,8 +69,7 @@ bash docs/doxy.sh
 It will output it under docs/html  
 If you want to output Git commit hashes to html, do it for the git cloned folder.
 
-#### Required
+### Required
 - [Doxygen](https://www.doxygen.nl/)
-- [pcregrep](https://formulae.brew.sh/formula/pcre2)
 - [Git](https://git-scm.com/) (Output commit hash to html)
 
