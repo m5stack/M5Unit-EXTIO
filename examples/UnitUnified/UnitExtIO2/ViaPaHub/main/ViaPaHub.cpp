@@ -35,7 +35,7 @@ constexpr uint32_t INTERVAL_MS{100};  // Interval for reading values (ms)
 constexpr uint32_t ROWS{4};           // Two pins per row
 m5::utility::elapsed_time_t latest_ms{};
 
-//! True when the board has a real screen (Atom / NanoC6 / NanoH2 / NessoN1 have none)
+//! True when the board has a screen to draw on (Atom / NanoC6 / NanoH2 have none, EPD boards are skipped)
 bool has_lcd{};
 
 //! The values of all pins, drawn off-screen and pushed at once to avoid flicker
@@ -44,7 +44,7 @@ M5Canvas canvas(&lcd);
 void setup_canvas()
 {
     lcd.fillScreen(TFT_DARKGREEN);
-    // 6x8 font scaled so that 14 characters ("P0:4095 P1:4095") fit the width
+    // 6x8 font scaled so that 15 characters ("P0:4095 P1:4095") fit the width
     const int32_t text_size = std::max<int32_t>(1, lcd.width() / (15 * 6));
     canvas.setPsram(false);
     canvas.setColorDepth(1);  // Two colors: background and text
@@ -99,8 +99,8 @@ void setup()
     M5_LOGI("M5UnitUnified initialized");
     M5_LOGI("%s", Units.debugInfo().c_str());
 
-    // A board without a screen reports a 1x1 dummy display
-    has_lcd = (lcd.width() > 8 && lcd.height() > 8);
+    // A board without a screen reports a 1x1 dummy display; EPD boards cannot redraw every 100 ms
+    has_lcd = (lcd.width() > 8 && lcd.height() > 8 && !lcd.isEPD());
     if (has_lcd) {
         setup_canvas();
     }
