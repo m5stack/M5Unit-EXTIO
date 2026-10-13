@@ -49,7 +49,7 @@ bool UnitExtIO2::begin()
         return false;
     }
 
-    if (!canPWMControl()) {
+    if (!can_pwm_control()) {
         M5_LIB_LOGW("Your firmware version (%u) is less than %u. PWM control function is not available.", _fw_version,
                     FIRMWARE_VERSION_CAN_PWM_CONTROL);
     }

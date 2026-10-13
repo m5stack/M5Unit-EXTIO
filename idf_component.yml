@@ -11,8 +11,8 @@ dependencies:
   m5stack/M5UnitUnified:
     git: https://github.com/m5stack/M5UnitUnified.git
     version: main
-  # The public header includes m5_utility/container/circular_buffer.hpp, so M5Utility is a
-  # direct dependency. Declaring it here does not conflict with the one M5UnitUnified pulls in:
+  # The sources include M5Utility.hpp directly, so M5Utility is a direct dependency.
+  # Declaring it here does not conflict with the one M5UnitUnified pulls in:
   # the same git URL and ref resolve to a single component.
   m5stack/M5Utility:
     git: https://github.com/m5stack/M5Utility.git
