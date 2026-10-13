@@ -74,8 +74,8 @@ constexpr uint8_t pin_bits_table[] = {
     0xC0,  // Adjacent bits (6,7)
     0x24,  // Bits that are far apart (2,5)
     0x81,  // Bits that are far apart (0,7)
-    0x55,  // Odd bits
-    0xAA,  // Even bits
+    0x55,  // Even bits (0,2,4,6)
+    0xAA,  // Odd bits (1,3,5,7)
     0xFF,  // All on
 };
 
@@ -92,13 +92,15 @@ bool check_mode(const Mode mode[UnitExtIO2::NUMBER_OF_PINS], const uint8_t pin_b
 }
 
 template <typename T, size_t N>
-bool check_values(const std::array<T, N>& arr, const uint8_t pin_bits)
+bool check_values_le(const std::array<T, N>& arr, const uint8_t pin_bits, const T max)
 {
     for (uint8_t pin = 0; pin < UnitExtIO2::NUMBER_OF_PINS; ++pin) {
         if ((1U << pin) & pin_bits) {
-            if (!arr[pin]) {
+            if (arr[pin] > max) {
                 return false;
             }
+        } else if (arr[pin] != 0) {
+            return false;
         }
     }
     return true;
@@ -151,7 +153,7 @@ TEST_F(TestExtIO2, Mode)
     // Each
     for (uint8_t pin = 0; pin < UnitExtIO2::NUMBER_OF_PINS; ++pin) {
         for (auto&& m : mode_table) {
-            auto s = m5::utility::formatString("PIN:%u Mode:%u", pin, m);
+            auto s = m5::utility::formatString("PIN:%u Mode:%d", pin, m5::stl::to_underlying(m));
             SCOPED_TRACE(s);
 
             EXPECT_TRUE(unit->writeMode(pin, m));
@@ -165,7 +167,7 @@ TEST_F(TestExtIO2, Mode)
     // Pin bits
     for (auto&& pin_bits : pin_bits_table) {
         for (auto&& m : mode_table) {
-            auto s = m5::utility::formatString("PIN:%X Mode:%u", pin_bits, m);
+            auto s = m5::utility::formatString("PIN:%X Mode:%d", pin_bits, m5::stl::to_underlying(m));
             SCOPED_TRACE(s);
             std::array<Mode, UnitExtIO2::NUMBER_OF_PINS> ma{};
 
@@ -275,10 +277,10 @@ TEST_F(TestExtIO2, ADCInput)
         EXPECT_TRUE(unit->writePinBitsMode(pin_bits, Mode::ADCInput));
 
         EXPECT_TRUE(unit->readPinBitsAnalogInput8(values.data(), pin_bits));
-        EXPECT_TRUE(check_values(values, pin_bits)) << values;
+        EXPECT_TRUE(check_values_le<uint16_t>(values, pin_bits, UnitExtIO2::MAX_ANALOG_8)) << values;
 
         EXPECT_TRUE(unit->readPinBitsAnalogInput12(values.data(), pin_bits));
-        EXPECT_TRUE(check_values(values, pin_bits)) << values;
+        EXPECT_TRUE(check_values_le<uint16_t>(values, pin_bits, UnitExtIO2::MAX_ANALOG_12)) << values;
     }
 }
 
@@ -359,9 +361,9 @@ TEST_F(TestExtIO2, LEDControl)
 
         EXPECT_TRUE(unit->writePinBitsLEDColor(pin_bits, color));
 
-        std::array<uint32_t, UnitExtIO2::NUMBER_OF_PINS> colors{};
-        EXPECT_TRUE(unit->readPinBitsLEDColor(colors.data(), pin_bits));
-        EXPECT_TRUE(check_values_eq(colors, pin_bits, color)) << colors;
+        std::array<uint32_t, UnitExtIO2::NUMBER_OF_PINS> read_colors{};
+        EXPECT_TRUE(unit->readPinBitsLEDColor(read_colors.data(), pin_bits));
+        EXPECT_TRUE(check_values_eq(read_colors, pin_bits, color)) << read_colors;
     }
 }
 
