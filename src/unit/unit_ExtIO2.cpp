@@ -233,7 +233,8 @@ bool UnitExtIO2::readAnalogInput(uint16_t& value, const uint8_t pin, const extio
     value = 0;
 
     uint8_t buf[2]{};
-    uint8_t reg = analog_input_reg_table[m5::stl::to_underlying(amode)] + pin * (1 + m5::stl::to_underlying(amode));
+    const uint8_t reg{static_cast<uint8_t>(analog_input_reg_table[m5::stl::to_underlying(amode)] +
+                                           pin * (1 + m5::stl::to_underlying(amode)))};
 
     if (mode(pin) == Mode::ADCInput && readRegister(reg, buf, 1 + m5::stl::to_underlying(amode), 0)) {
         value = (amode == AnalogMode::Bits8) ? buf[0] : (buf[0] | (static_cast<uint16_t>(buf[1]) << 8));
@@ -450,11 +451,11 @@ bool UnitExtIO2::changeI2CAddress(const uint8_t i2c_address)
     if (writeRegister8(ADDRESS_REG, i2c_address) && changeAddress(i2c_address)) {
         uint8_t v{};
         bool done{};
-        auto timeout_at = m5::utility::millis() + 1000;
+        const auto start_at = m5::utility::millis();
         do {
             m5::utility::delay(100);
             done = readFirmwareVersion(v) && (v != 0);
-        } while (!done && m5::utility::millis() <= timeout_at);
+        } while (!done && !m5::utility::hasElapsed(start_at, 1000));
         return done;
     }
     return false;
