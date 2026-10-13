@@ -112,7 +112,7 @@ jobs:
           - esp32
 
         include:
-          # Specific sketches for m5stack_core only
+          # The other examples use the same library and connection as AnaDigInput: m5stack_core only
           - sketch: DigOutput
             unit: UnitExtIO2
             platform-url: https://m5stack.oss-cn-shenzhen.aliyuncs.com/resource/arduino/package_m5stack_index.json
@@ -134,6 +134,7 @@ jobs:
             platform: m5stack
             archi: esp32
             board: m5stack_core
+          # ViaPaHub goes through UnitPaHub (M5Unit-HUB), so it is built on the representative boards
           - sketch: ViaPaHub
             unit: UnitExtIO2
             platform-url: https://m5stack.oss-cn-shenzhen.aliyuncs.com/resource/arduino/package_m5stack_index.json

@@ -89,7 +89,7 @@ jobs:
           - latest
 
         include:
-          # Specific sketches for Core only
+          # The other examples use the same library and connection as AnaDigInput: Core only
           - example: DigOutput
             unit: UnitExtIO2
             board: Core
@@ -105,6 +105,7 @@ jobs:
             board: Core
             framework: Arduino
             espressif32: latest
+          # ViaPaHub goes through UnitPaHub (M5Unit-HUB), so it is built on the representative boards
           - example: ViaPaHub
             unit: UnitExtIO2
             framework: Arduino
