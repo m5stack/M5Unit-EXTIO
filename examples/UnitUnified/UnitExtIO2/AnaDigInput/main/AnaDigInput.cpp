@@ -29,7 +29,7 @@ Operation& operator++(Operation& op)
     return op;
 }
 Operation operation{Operation::Analog8};
-unsigned long latest{};
+m5::utility::elapsed_time_t latest{};
 
 constexpr uint32_t interval{20};  // Interval for reading values (ms)
 
@@ -74,11 +74,15 @@ void change_operation(const Operation op)
     latest = 0;
     switch (op) {
         case Operation::Digital:
-            unit.writePinBitsMode(target_pins, Mode::DigitalInput);
+            if (!unit.writePinBitsMode(target_pins, Mode::DigitalInput)) {
+                M5_LOGE("Failed to set mode");
+            }
             break;
         case Operation::Analog8:
         case Operation::Analog12:
-            unit.writePinBitsMode(target_pins, Mode::ADCInput);
+            if (!unit.writePinBitsMode(target_pins, Mode::ADCInput)) {
+                M5_LOGE("Failed to set mode");
+            }
             break;
         default:
             break;
@@ -152,9 +156,9 @@ void render_status(const uint8_t high_bits)
 
 void analog8_function()
 {
-    uint16_t v[UnitExtIO2::NUMBER_OF_PINS]{};
-    auto at = m5::utility::millis();
-    if (!latest || at >= latest + interval) {
+    const auto at = m5::utility::millis();
+    if (!latest || m5::utility::hasElapsed(latest, interval, at)) {
+        uint16_t v[UnitExtIO2::NUMBER_OF_PINS]{};
         if (!unit.readPinBitsAnalogInput8(v, target_pins)) {
             M5_LOGE("Failed to read");
             return;
@@ -169,10 +173,9 @@ void analog8_function()
 
 void analog12_function()
 {
-    uint16_t v[UnitExtIO2::NUMBER_OF_PINS]{};
-
-    auto at = m5::utility::millis();
-    if (!latest || at >= latest + interval) {
+    const auto at = m5::utility::millis();
+    if (!latest || m5::utility::hasElapsed(latest, interval, at)) {
+        uint16_t v[UnitExtIO2::NUMBER_OF_PINS]{};
         if (!unit.readPinBitsAnalogInput12(v, target_pins)) {
             M5_LOGE("Failed to read");
             return;
@@ -187,10 +190,9 @@ void analog12_function()
 
 void digital_function()
 {
-    uint8_t high_bits{};
-
-    auto at = m5::utility::millis();
-    if (!latest || at >= latest + interval) {
+    const auto at = m5::utility::millis();
+    if (!latest || m5::utility::hasElapsed(latest, interval, at)) {
+        uint8_t high_bits{};
         if (!unit.readPinBitsDigitalInput(high_bits, target_pins)) {
             M5_LOGE("Failed to read");
             return;
