@@ -30,6 +30,15 @@ bool can_render{};
 bool small_screen{};
 int16_t font_h{16};
 
+// Bits as "01010101" in the order Pin0 ... Pin7
+void bits_to_string(char out[UnitExtIO2::NUMBER_OF_PINS + 1], const uint8_t bits)
+{
+    for (uint8_t pin = 0; pin < UnitExtIO2::NUMBER_OF_PINS; ++pin) {
+        out[pin] = ((bits >> pin) & 1) ? '1' : '0';
+    }
+    out[UnitExtIO2::NUMBER_OF_PINS] = '\0';
+}
+
 void render()
 {
     if (!can_render) {
@@ -39,16 +48,10 @@ void render()
 
     int16_t row1 = 2 + font_h + 2;
     int16_t row2 = row1 + font_h + 2;
+    char bits[UnitExtIO2::NUMBER_OF_PINS + 1]{};
+    bits_to_string(bits, state);
     lcd.setCursor(2, row1);
-    if (small_screen) {
-        lcd.printf("%u%u%u%u%u%u%u%u", (bool)(state & 0x01), (bool)(state & 0x02), (bool)(state & 0x04),
-                   (bool)(state & 0x08), (bool)(state & 0x10), (bool)(state & 0x20), (bool)(state & 0x40),
-                   (bool)(state & 0x80));
-    } else {
-        lcd.printf("Pin0:%u%u%u%u%u%u%u%u:Pin7", (bool)(state & 0x01), (bool)(state & 0x02), (bool)(state & 0x04),
-                   (bool)(state & 0x08), (bool)(state & 0x10), (bool)(state & 0x20), (bool)(state & 0x40),
-                   (bool)(state & 0x80));
-    }
+    lcd.printf(small_screen ? "%s" : "Pin0:%s:Pin7", bits);
     lcd.setCursor(2, row2);
     lcd.printf(small_screen ? "Pin:%u" : "Current Pin:%u", current);
 }
@@ -90,7 +93,10 @@ void setup()
         lcd.endWrite();
     }
 
-    unit.writeAllMode(Mode::DigitalOutput);
+    if (!unit.writeAllMode(Mode::DigitalOutput)) {
+        M5_LOGE("Failed to set mode");
+        m5::unit::wiring::failStop();
+    }
     unit.writeAllDigitalOutput(false);  // All pins to LOW
     M5.Log.printf("Current Pin:%u\n", current);
 }
@@ -122,9 +128,9 @@ void loop()
             render();
             lcd.endWrite();
         }
-        M5.Log.printf("Output Pin0:%u%u%u%u%u%u%u%u:Pin7\n", (bool)(state & 0x01), (bool)(state & 0x02),
-                      (bool)(state & 0x04), (bool)(state & 0x08), (bool)(state & 0x10), (bool)(state & 0x20),
-                      (bool)(state & 0x40), (bool)(state & 0x80));
+        char bits[UnitExtIO2::NUMBER_OF_PINS + 1]{};
+        bits_to_string(bits, state);
+        M5.Log.printf("Output Pin0:%s:Pin7\n", bits);
 
         dirty = false;
     }

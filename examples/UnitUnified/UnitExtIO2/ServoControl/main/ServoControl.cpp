@@ -57,7 +57,10 @@ void setup()
     can_render   = (lcd.width() > 0 && lcd.height() > 0 && !lcd.isEPD());
     small_screen = (lcd.width() < 200);
 
-    unit.writePinBitsMode(target_pins, Mode::ServoControl);
+    if (!unit.writePinBitsMode(target_pins, Mode::ServoControl)) {
+        M5_LOGE("Failed to set mode");
+        m5::unit::wiring::failStop();
+    }
 
     if (can_render) {
         if (small_screen) {
