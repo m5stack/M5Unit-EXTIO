@@ -85,6 +85,11 @@ void setup()
     std::fill(std::begin(cfg.mode), std::end(cfg.mode), Mode::ADCInput);
     unit.config(cfg);
 
+    // Run the hub at the unit's clock (the slowest on the bus)
+    auto hcfg  = hub.component_config();
+    hcfg.clock = std::min(hcfg.clock, unit.component_config().clock);
+    hub.component_config(hcfg);
+
     if (!hub.add(unit, UNIT_CHANNEL)) {  // PaHub ch:0 -> UnitExtIO2
         M5_LOGE("Failed to add children");
         m5::unit::wiring::failStop();

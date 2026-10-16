@@ -90,6 +90,7 @@ public:
     //! @param addr I2C address (default DEFAULT_ADDRESS)
     explicit UnitExtIO2(const uint8_t addr = DEFAULT_ADDRESS) : Component(addr)
     {
+        // 100 kHz: at 400 kHz, firmware V1 NACKs right after a pin mode change (measured on CoreS3)
         auto ccfg  = component_config();
         ccfg.clock = 100 * 1000U;
         component_config(ccfg);
