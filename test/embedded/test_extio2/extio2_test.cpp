@@ -35,12 +35,46 @@ using namespace m5::unit;
 using namespace m5::unit::extio2;
 using m5::unit::types::elapsed_time_t;
 
-class TestExtIO2 : public I2CComponentTestBase<UnitExtIO2> {
+namespace {
+
+// I2C addresses the I2CAddress test moves the unit to (not used by any M5 product)
+constexpr uint8_t temporary_addresses[] = {0x09, 0x74, 0x5B};
+
+// Exposes changeAddress() so a test can follow a unit left at another address
+class UnitExtIO2ForTest : public UnitExtIO2 {
+public:
+    using UnitExtIO2::changeAddress;
+};
+
+}  // namespace
+
+// begin() falls back to moving the unit back to the default address when an interrupted
+// I2CAddress test left it at a temporary one (the firmware keeps the address in flash)
+class TestExtIO2Base : public I2CComponentTestBase<UnitExtIO2> {
+protected:
+    virtual bool begin() override
+    {
+        if (I2CComponentTestBase<UnitExtIO2>::begin()) {
+            return true;
+        }
+        auto u = static_cast<UnitExtIO2ForTest*>(unit.get());
+        for (auto&& addr : temporary_addresses) {
+            uint8_t ver{};
+            if (u->changeAddress(addr) && u->readFirmwareVersion(ver) && ver) {
+                M5_LOGW("Unit found at 0x%02X, restore to 0x%02X", addr, UnitExtIO2::DEFAULT_ADDRESS);
+                return u->changeI2CAddress(UnitExtIO2::DEFAULT_ADDRESS) && Units.begin();
+            }
+        }
+        u->changeAddress(UnitExtIO2::DEFAULT_ADDRESS);
+        return false;
+    }
+};
+
+class TestExtIO2 : public TestExtIO2Base {
 protected:
     virtual UnitExtIO2* get_instance() override
     {
-        auto ptr = new m5::unit::UnitExtIO2();
-        return ptr;
+        return new UnitExtIO2ForTest();
     }
 };
 
@@ -492,7 +526,8 @@ TEST_F(TestExtIO2, PinBitsLEDColorRGB)
 
 /*
   WARNING!!
-  Failure of this test will result in an unexpected I2C address being set!
+  If this test is interrupted (reset, power loss), the unit keeps a temporary I2C address.
+  The next begin() of these fixtures moves it back to the default address.
 */
 TEST_F(TestExtIO2, I2CAddress)
 {
@@ -504,32 +539,16 @@ TEST_F(TestExtIO2, I2CAddress)
     EXPECT_FALSE(unit->changeI2CAddress(0x78));  // Invalid
     EXPECT_FALSE(unit->changeI2CAddress(128));   // Invalid
 
-    // Change to 0x09
-    EXPECT_TRUE(unit->changeI2CAddress(0x09));
-    EXPECT_TRUE(unit->readI2CAddress(addr));
-    EXPECT_EQ(addr, 0x09);
-    EXPECT_EQ(unit->address(), 0x09);
+    for (auto&& a : temporary_addresses) {
+        SCOPED_TRACE(m5::utility::formatString("0x%02X", a));
+        EXPECT_TRUE(unit->changeI2CAddress(a));
+        EXPECT_TRUE(unit->readI2CAddress(addr));
+        EXPECT_EQ(addr, a);
+        EXPECT_EQ(unit->address(), a);
 
-    EXPECT_TRUE(unit->readFirmwareVersion(ver));
-    EXPECT_NE(ver, 0x00);
-
-    // Change to 0x77
-    EXPECT_TRUE(unit->changeI2CAddress(0x77));
-    EXPECT_TRUE(unit->readI2CAddress(addr));
-    EXPECT_EQ(addr, 0x77);
-    EXPECT_EQ(unit->address(), 0x77);
-
-    EXPECT_TRUE(unit->readFirmwareVersion(ver));
-    EXPECT_NE(ver, 0x00);
-
-    // Change to 0x52
-    EXPECT_TRUE(unit->changeI2CAddress(0x52));
-    EXPECT_TRUE(unit->readI2CAddress(addr));
-    EXPECT_EQ(addr, 0x52);
-    EXPECT_EQ(unit->address(), 0x52);
-
-    EXPECT_TRUE(unit->readFirmwareVersion(ver));
-    EXPECT_NE(ver, 0x00);
+        EXPECT_TRUE(unit->readFirmwareVersion(ver));
+        EXPECT_NE(ver, 0x00);
+    }
 
     // Change to default
     EXPECT_TRUE(unit->changeI2CAddress(UnitExtIO2::DEFAULT_ADDRESS));
@@ -547,12 +566,11 @@ struct BeginConfigParams {
     Mode mode;
 };
 
-class TestExtIO2BeginConfig : public I2CComponentTestBase<UnitExtIO2>,
-                              public ::testing::WithParamInterface<BeginConfigParams> {
+class TestExtIO2BeginConfig : public TestExtIO2Base, public ::testing::WithParamInterface<BeginConfigParams> {
 protected:
     virtual UnitExtIO2* get_instance() override
     {
-        auto ptr = new UnitExtIO2();
+        auto ptr = new UnitExtIO2ForTest();
         if (ptr) {
             auto cfg       = ptr->config();
             cfg.apply_mode = GetParam().apply_mode;
