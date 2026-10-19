@@ -1,5 +1,6 @@
 var searchData=
 [
-  ['bits12_0',['Bits12',['../unit___ext_i_o2_8hpp.html#a0d716e25fa64dfbd2182d8e16da13196af66f3050e319d04c1dc9a23989b8814d',1,'m5::unit::extio2']]],
-  ['bits8_1',['Bits8',['../unit___ext_i_o2_8hpp.html#a0d716e25fa64dfbd2182d8e16da13196adef99159db8f23defb85914a4f01c139',1,'m5::unit::extio2']]]
+  ['begin_0',['begin',['../classm5_1_1unit_1_1_unit_ext_i_o2.html#a0efa23f1b9d7e7b6e8ba1b6599754199',1,'m5::unit::UnitExtIO2']]],
+  ['bits12_1',['Bits12',['../unit___ext_i_o2_8hpp.html#a0d716e25fa64dfbd2182d8e16da13196af66f3050e319d04c1dc9a23989b8814d',1,'m5::unit::extio2']]],
+  ['bits8_2',['Bits8',['../unit___ext_i_o2_8hpp.html#a0d716e25fa64dfbd2182d8e16da13196adef99159db8f23defb85914a4f01c139',1,'m5::unit::extio2']]]
 ];
