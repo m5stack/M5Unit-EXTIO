@@ -51,3 +51,14 @@ tmp/
 *.pem
 *.key
 *.cert
+
+# ESP-IDF
+build/
+managed_components/
+dependencies.lock
+sdkconfig
+sdkconfig.old
+
+# clangd
+.clangd
+.cache/

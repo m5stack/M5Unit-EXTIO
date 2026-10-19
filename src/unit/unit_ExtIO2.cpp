@@ -49,7 +49,7 @@ bool UnitExtIO2::begin()
         return false;
     }
 
-    if (!canPWMControl()) {
+    if (!can_pwm_control()) {
         M5_LIB_LOGW("Your firmware version (%u) is less than %u. PWM control function is not available.", _fw_version,
                     FIRMWARE_VERSION_CAN_PWM_CONTROL);
     }
@@ -231,9 +231,14 @@ bool UnitExtIO2::write_pin_bits_digital_output(const uint8_t pin_bits, const uin
 bool UnitExtIO2::readAnalogInput(uint16_t& value, const uint8_t pin, const extio2::AnalogMode amode)
 {
     value = 0;
+    if (amode > AnalogMode::Bits12) {
+        M5_LIB_LOGE("Invalid analog mode %u", m5::stl::to_underlying(amode));
+        return false;
+    }
 
     uint8_t buf[2]{};
-    uint8_t reg = analog_input_reg_table[m5::stl::to_underlying(amode)] + pin * (1 + m5::stl::to_underlying(amode));
+    const uint8_t reg{static_cast<uint8_t>(analog_input_reg_table[m5::stl::to_underlying(amode)] +
+                                           pin * (1 + m5::stl::to_underlying(amode)))};
 
     if (mode(pin) == Mode::ADCInput && readRegister(reg, buf, 1 + m5::stl::to_underlying(amode), 0)) {
         value = (amode == AnalogMode::Bits8) ? buf[0] : (buf[0] | (static_cast<uint16_t>(buf[1]) << 8));
@@ -450,11 +455,11 @@ bool UnitExtIO2::changeI2CAddress(const uint8_t i2c_address)
     if (writeRegister8(ADDRESS_REG, i2c_address) && changeAddress(i2c_address)) {
         uint8_t v{};
         bool done{};
-        auto timeout_at = m5::utility::millis() + 1000;
+        const auto start_at = m5::utility::millis();
         do {
             m5::utility::delay(100);
             done = readFirmwareVersion(v) && (v != 0);
-        } while (!done && m5::utility::millis() <= timeout_at);
+        } while (!done && !m5::utility::hasElapsed(start_at, 1000));
         return done;
     }
     return false;

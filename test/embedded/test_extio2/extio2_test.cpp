@@ -35,12 +35,46 @@ using namespace m5::unit;
 using namespace m5::unit::extio2;
 using m5::unit::types::elapsed_time_t;
 
-class TestExtIO2 : public I2CComponentTestBase<UnitExtIO2> {
+namespace {
+
+// I2C addresses the I2CAddress test moves the unit to (not used by any M5 product)
+constexpr uint8_t temporary_addresses[] = {0x09, 0x74, 0x5B};
+
+// Exposes changeAddress() so a test can follow a unit left at another address
+class UnitExtIO2ForTest : public UnitExtIO2 {
+public:
+    using UnitExtIO2::changeAddress;
+};
+
+}  // namespace
+
+// begin() falls back to moving the unit back to the default address when an interrupted
+// I2CAddress test left it at a temporary one (the firmware keeps the address in flash)
+class TestExtIO2Base : public I2CComponentTestBase<UnitExtIO2> {
+protected:
+    virtual bool begin() override
+    {
+        if (I2CComponentTestBase<UnitExtIO2>::begin()) {
+            return true;
+        }
+        auto u = static_cast<UnitExtIO2ForTest*>(unit.get());
+        for (auto&& addr : temporary_addresses) {
+            uint8_t ver{};
+            if (u->changeAddress(addr) && u->readFirmwareVersion(ver) && ver) {
+                M5_LOGW("Unit found at 0x%02X, restore to 0x%02X", addr, UnitExtIO2::DEFAULT_ADDRESS);
+                return u->changeI2CAddress(UnitExtIO2::DEFAULT_ADDRESS) && Units.begin();
+            }
+        }
+        u->changeAddress(UnitExtIO2::DEFAULT_ADDRESS);
+        return false;
+    }
+};
+
+class TestExtIO2 : public TestExtIO2Base {
 protected:
     virtual UnitExtIO2* get_instance() override
     {
-        auto ptr = new m5::unit::UnitExtIO2();
-        return ptr;
+        return new UnitExtIO2ForTest();
     }
 };
 
@@ -74,8 +108,8 @@ constexpr uint8_t pin_bits_table[] = {
     0xC0,  // Adjacent bits (6,7)
     0x24,  // Bits that are far apart (2,5)
     0x81,  // Bits that are far apart (0,7)
-    0x55,  // Odd bits
-    0xAA,  // Even bits
+    0x55,  // Even bits (0,2,4,6)
+    0xAA,  // Odd bits (1,3,5,7)
     0xFF,  // All on
 };
 
@@ -92,13 +126,15 @@ bool check_mode(const Mode mode[UnitExtIO2::NUMBER_OF_PINS], const uint8_t pin_b
 }
 
 template <typename T, size_t N>
-bool check_values(const std::array<T, N>& arr, const uint8_t pin_bits)
+bool check_values_le(const std::array<T, N>& arr, const uint8_t pin_bits, const T max)
 {
     for (uint8_t pin = 0; pin < UnitExtIO2::NUMBER_OF_PINS; ++pin) {
         if ((1U << pin) & pin_bits) {
-            if (!arr[pin]) {
+            if (arr[pin] > max) {
                 return false;
             }
+        } else if (arr[pin] != 0) {
+            return false;
         }
     }
     return true;
@@ -151,7 +187,7 @@ TEST_F(TestExtIO2, Mode)
     // Each
     for (uint8_t pin = 0; pin < UnitExtIO2::NUMBER_OF_PINS; ++pin) {
         for (auto&& m : mode_table) {
-            auto s = m5::utility::formatString("PIN:%u Mode:%u", pin, m);
+            auto s = m5::utility::formatString("PIN:%u Mode:%d", pin, m5::stl::to_underlying(m));
             SCOPED_TRACE(s);
 
             EXPECT_TRUE(unit->writeMode(pin, m));
@@ -165,7 +201,7 @@ TEST_F(TestExtIO2, Mode)
     // Pin bits
     for (auto&& pin_bits : pin_bits_table) {
         for (auto&& m : mode_table) {
-            auto s = m5::utility::formatString("PIN:%X Mode:%u", pin_bits, m);
+            auto s = m5::utility::formatString("PIN:%X Mode:%d", pin_bits, m5::stl::to_underlying(m));
             SCOPED_TRACE(s);
             std::array<Mode, UnitExtIO2::NUMBER_OF_PINS> ma{};
 
@@ -262,6 +298,16 @@ TEST_F(TestExtIO2, ADCInput)
 
     std::array<uint16_t, UnitExtIO2::NUMBER_OF_PINS> values{};
 
+    // Invalid analog mode
+    {
+        EXPECT_TRUE(unit->writeMode(0, Mode::ADCInput));
+        uint16_t v{0xFFFF};
+        EXPECT_FALSE(unit->readAnalogInput(v, 0, static_cast<AnalogMode>(2)));
+        EXPECT_EQ(v, 0U);
+        EXPECT_FALSE(unit->readPinBitsAnalogInput(values.data(), 0x01, static_cast<AnalogMode>(2)));
+        EXPECT_TRUE(unit->readAnalogInput(v, 0, AnalogMode::Bits12));
+    }
+
     EXPECT_TRUE(unit->writeMode(0, Mode::DigitalInput));
     EXPECT_FALSE(unit->readAllAnalogInput8(values.data()));
     EXPECT_FALSE(unit->readAllAnalogInput12(values.data()));
@@ -275,10 +321,10 @@ TEST_F(TestExtIO2, ADCInput)
         EXPECT_TRUE(unit->writePinBitsMode(pin_bits, Mode::ADCInput));
 
         EXPECT_TRUE(unit->readPinBitsAnalogInput8(values.data(), pin_bits));
-        EXPECT_TRUE(check_values(values, pin_bits)) << values;
+        EXPECT_TRUE(check_values_le<uint16_t>(values, pin_bits, UnitExtIO2::MAX_ANALOG_8)) << values;
 
         EXPECT_TRUE(unit->readPinBitsAnalogInput12(values.data(), pin_bits));
-        EXPECT_TRUE(check_values(values, pin_bits)) << values;
+        EXPECT_TRUE(check_values_le<uint16_t>(values, pin_bits, UnitExtIO2::MAX_ANALOG_12)) << values;
     }
 }
 
@@ -359,9 +405,9 @@ TEST_F(TestExtIO2, LEDControl)
 
         EXPECT_TRUE(unit->writePinBitsLEDColor(pin_bits, color));
 
-        std::array<uint32_t, UnitExtIO2::NUMBER_OF_PINS> colors{};
-        EXPECT_TRUE(unit->readPinBitsLEDColor(colors.data(), pin_bits));
-        EXPECT_TRUE(check_values_eq(colors, pin_bits, color)) << colors;
+        std::array<uint32_t, UnitExtIO2::NUMBER_OF_PINS> read_colors{};
+        EXPECT_TRUE(unit->readPinBitsLEDColor(read_colors.data(), pin_bits));
+        EXPECT_TRUE(check_values_eq(read_colors, pin_bits, color)) << read_colors;
     }
 }
 
@@ -480,7 +526,8 @@ TEST_F(TestExtIO2, PinBitsLEDColorRGB)
 
 /*
   WARNING!!
-  Failure of this test will result in an unexpected I2C address being set!
+  If this test is interrupted (reset, power loss), the unit keeps a temporary I2C address.
+  The next begin() of these fixtures moves it back to the default address.
 */
 TEST_F(TestExtIO2, I2CAddress)
 {
@@ -492,32 +539,16 @@ TEST_F(TestExtIO2, I2CAddress)
     EXPECT_FALSE(unit->changeI2CAddress(0x78));  // Invalid
     EXPECT_FALSE(unit->changeI2CAddress(128));   // Invalid
 
-    // Change to 0x09
-    EXPECT_TRUE(unit->changeI2CAddress(0x09));
-    EXPECT_TRUE(unit->readI2CAddress(addr));
-    EXPECT_EQ(addr, 0x09);
-    EXPECT_EQ(unit->address(), 0x09);
+    for (auto&& a : temporary_addresses) {
+        SCOPED_TRACE(m5::utility::formatString("0x%02X", a));
+        EXPECT_TRUE(unit->changeI2CAddress(a));
+        EXPECT_TRUE(unit->readI2CAddress(addr));
+        EXPECT_EQ(addr, a);
+        EXPECT_EQ(unit->address(), a);
 
-    EXPECT_TRUE(unit->readFirmwareVersion(ver));
-    EXPECT_NE(ver, 0x00);
-
-    // Change to 0x77
-    EXPECT_TRUE(unit->changeI2CAddress(0x77));
-    EXPECT_TRUE(unit->readI2CAddress(addr));
-    EXPECT_EQ(addr, 0x77);
-    EXPECT_EQ(unit->address(), 0x77);
-
-    EXPECT_TRUE(unit->readFirmwareVersion(ver));
-    EXPECT_NE(ver, 0x00);
-
-    // Change to 0x52
-    EXPECT_TRUE(unit->changeI2CAddress(0x52));
-    EXPECT_TRUE(unit->readI2CAddress(addr));
-    EXPECT_EQ(addr, 0x52);
-    EXPECT_EQ(unit->address(), 0x52);
-
-    EXPECT_TRUE(unit->readFirmwareVersion(ver));
-    EXPECT_NE(ver, 0x00);
+        EXPECT_TRUE(unit->readFirmwareVersion(ver));
+        EXPECT_NE(ver, 0x00);
+    }
 
     // Change to default
     EXPECT_TRUE(unit->changeI2CAddress(UnitExtIO2::DEFAULT_ADDRESS));
@@ -535,12 +566,11 @@ struct BeginConfigParams {
     Mode mode;
 };
 
-class TestExtIO2BeginConfig : public I2CComponentTestBase<UnitExtIO2>,
-                              public ::testing::WithParamInterface<BeginConfigParams> {
+class TestExtIO2BeginConfig : public TestExtIO2Base, public ::testing::WithParamInterface<BeginConfigParams> {
 protected:
     virtual UnitExtIO2* get_instance() override
     {
-        auto ptr = new UnitExtIO2();
+        auto ptr = new UnitExtIO2ForTest();
         if (ptr) {
             auto cfg       = ptr->config();
             cfg.apply_mode = GetParam().apply_mode;

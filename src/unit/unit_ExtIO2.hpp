@@ -11,7 +11,6 @@
 #define M5_UNIT_EXTIO_UNIT_EXTIO2_HPP
 
 #include <M5UnitComponent.hpp>
-#include <m5_utility/container/circular_buffer.hpp>
 #include <array>
 #include <algorithm>
 
@@ -27,9 +26,10 @@ namespace extio2 {
 /*!
   @enum Mode
   @brief Operating mode
+  @note PWM control (firmware V3) is not supported
  */
 enum class Mode : int8_t {
-    Invalid = -1,
+    Invalid = -1,   //!< Invalid (not set or unknown)
     DigitalInput,   //!< Digital input
     DigitalOutput,  //!< Digital output
     ADCInput,       //!< ADC input
@@ -80,16 +80,17 @@ public:
         //! Set mode on begin if true
         bool apply_mode{true};
         //! Set mode to all pins on begin if apply_mode is true
-        extio2::Mode mode[NUMBER_OF_PINS] = {extio2::Mode::DigitalInput, extio2::Mode::DigitalInput,
-                                             extio2::Mode::DigitalInput, extio2::Mode::DigitalInput,
-                                             extio2::Mode::DigitalInput, extio2::Mode::DigitalInput,
-                                             extio2::Mode::DigitalInput, extio2::Mode::DigitalInput};
+        extio2::Mode mode[NUMBER_OF_PINS]{extio2::Mode::DigitalInput, extio2::Mode::DigitalInput,
+                                          extio2::Mode::DigitalInput, extio2::Mode::DigitalInput,
+                                          extio2::Mode::DigitalInput, extio2::Mode::DigitalInput,
+                                          extio2::Mode::DigitalInput, extio2::Mode::DigitalInput};
     };
 
     //! @brief Constructor
     //! @param addr I2C address (default DEFAULT_ADDRESS)
     explicit UnitExtIO2(const uint8_t addr = DEFAULT_ADDRESS) : Component(addr)
     {
+        // 100 kHz: at 400 kHz, firmware V1 NACKs right after a pin mode change (measured on CoreS3)
         auto ccfg  = component_config();
         ccfg.clock = 100 * 1000U;
         component_config(ccfg);
@@ -101,12 +102,13 @@ public:
     }
 
     //! @brief Begin the unit
+    //! @return True if successful
     virtual bool begin() override;
 
     ///@name Settings for begin
     ///@{
     /*! @brief Gets the configuration */
-    inline config_t config()
+    inline config_t config() const
     {
         return _cfg;
     }
@@ -143,7 +145,7 @@ public:
       @param pin Pin number
       @return Mode
     */
-    inline extio2::Mode mode(const uint8_t pin)
+    inline extio2::Mode mode(const uint8_t pin) const
     {
         return (pin < NUMBER_OF_PINS) ? _mode[pin] : extio2::Mode::Invalid;
     }
@@ -172,6 +174,7 @@ public:
       @param pin_bits Bits of the target pin
       @param mode Mode
       @return True if successful
+      @note Returns false if pin_bits is 0
      */
     bool writePinBitsMode(const uint8_t pin_bits, const extio2::Mode mode);
     /*!
@@ -206,7 +209,7 @@ public:
       @param pin_bits Bits of the target pin
       @return True if successful
       @pre The mode of the specified pin must be Mode::DigitalInput
-      @warning high_bits values for unspecified pins are undefined
+      @note Bits of pins not in pin_bits are 0
      */
     bool readPinBitsDigitalInput(uint8_t& high_bits, const uint8_t pin_bits);
     /*!
@@ -333,7 +336,7 @@ public:
       @param[out] value Value
       @param pin Pin number
       @param amode Data width
-      @return True if successful
+      @return True if successful, false if amode is invalid
       @pre The mode of the specified pin must be Mode::ADCInput
      */
     bool readAnalogInput(uint16_t& value, const uint8_t pin, const extio2::AnalogMode amode);
@@ -364,9 +367,9 @@ public:
       @param[out] values Value array
       @param pin_bits Bits of the target pin
       @param amode Data width
-      @return True if successful
+      @return True if successful, false if amode is invalid
       @pre The mode of the specified pin must be Mode::ADCInput
-      @warning values values for unspecified pins are undefined
+      @note Elements of pins not in pin_bits are set to 0
      */
     bool readPinBitsAnalogInput(uint16_t values[NUMBER_OF_PINS], const uint8_t pin_bits,
                                 const extio2::AnalogMode amode);
@@ -376,7 +379,7 @@ public:
       @param pin_bits Bits of the target pin
       @return True if successful
       @pre The mode of the specified pin must be Mode::ADCInput
-      @warning values for unspecified pins are undefined
+      @note Elements of pins not in pin_bits are set to 0
     */
     inline bool readPinBitsAnalogInput8(uint16_t values[NUMBER_OF_PINS], const uint8_t pin_bits)
     {
@@ -388,7 +391,7 @@ public:
       @param pin_bits Bits of the target pin
       @return True if successful
       @pre The mode of the specified pin must be Mode::ADCInput
-      @warning values for unspecified pins are undefined
+      @note Elements of pins not in pin_bits are set to 0
     */
     inline bool readPinBitsAnalogInput12(uint16_t values[NUMBER_OF_PINS], const uint8_t pin_bits)
     {
@@ -398,19 +401,29 @@ public:
       @brief Read the analog input from all pins
       @param[out] values Value array
       @param amode Data width
-      @return True if successful
+      @return True if successful, false if amode is invalid
       @pre The mode of all pins must be Mode::ADCInput
      */
     inline bool readAllAnalogInput(uint16_t values[NUMBER_OF_PINS], const extio2::AnalogMode amode)
     {
         return readPinBitsAnalogInput(values, 0xFF, amode);
     }
-    //! @brief Read the analog input 8 bits from all pins
+    /*!
+      @brief Read the analog input 8 bits from all pins
+      @param[out] values Value array (0 - 255)
+      @return True if successful
+      @pre The mode of all pins must be Mode::ADCInput
+     */
     bool readAllAnalogInput8(uint16_t values[NUMBER_OF_PINS])
     {
         return readAllAnalogInput(values, extio2::AnalogMode::Bits8);
     }
-    //! @brief Read the analog input 12 bits from all pins
+    /*!
+      @brief Read the analog input 12 bits from all pins
+      @param[out] values Value array (0 - 4095)
+      @return True if successful
+      @pre The mode of all pins must be Mode::ADCInput
+     */
     bool readAllAnalogInput12(uint16_t values[NUMBER_OF_PINS])
     {
         return readAllAnalogInput(values, extio2::AnalogMode::Bits12);
@@ -427,15 +440,17 @@ public:
       @param pin Pin number
       @return True if successful
       @pre The mode of the specified pin must be Mode::ServoControl
+      @note degree is 255 if no angle has been written to the pin yet
      */
     bool readServoAngle(uint8_t& degree, const uint8_t pin);
     /*!
       @brief Read the servo angle from the specified pin bits
-      @param[out] degrees Angle array of all pins
+      @param[out] degrees Angle array
       @param pin_bits Bits of the target pin
       @return True if successful
       @pre The mode of the specified pin must be Mode::ServoControl
-      @warning degrees values for unspecified pins are undefined
+      @note Elements of pins not in pin_bits are set to 0
+      @note degrees is 255 for pins to which no angle has been written yet
      */
     bool readPinBitsServoAngle(uint8_t degrees[NUMBER_OF_PINS], const uint8_t pin_bits);
     /*!
@@ -443,6 +458,7 @@ public:
       @param[out] degrees Angle array of all pins
       @return True if successful
       @pre The mode of all pins must be Mode::ServoControl
+      @note degrees is 255 for pins to which no angle has been written yet
      */
     inline bool readAllServoAngle(uint8_t degrees[NUMBER_OF_PINS])
     {
@@ -451,23 +467,24 @@ public:
     /*!
       @brief Write the servo angle to the specified pin
       @param pin Pin number
-      @param degree Angle
-      @return True if successful
+      @param degree Angle (degree, 0 - 180)
+      @return True if successful, false if the value is out of range
       @pre The mode of the specified pin must be Mode::ServoControl
      */
     bool writeServoAngle(const uint8_t pin, const uint8_t degree);
     /*!
       @brief Write the servo angle to the specified pin bits
       @param pin_bits Bits of the target pin
-      @param degree Angle
-      @return True if successful
+      @param degree Angle (degree, 0 - 180)
+      @return True if successful, false if the value is out of range
+      @note Returns false if pin_bits is 0
       @pre The mode of the specified pin must be Mode::ServoControl
      */
     bool writePinBitsServoAngle(const uint8_t pin_bits, const uint8_t degree);
     /*!
       @brief Write the servo angle to all pins
-      @param degree Angle
-      @return True if successful
+      @param degree Angle (degree, 0 - 180)
+      @return True if successful, false if the value is out of range
       @pre The mode of all pins must be Mode::ServoControl
      */
     inline bool writeAllServoAngle(const uint8_t degree)
@@ -480,6 +497,7 @@ public:
       @param pin Pin number
       @return True if successful
       @pre The mode of the specified pin must be Mode::ServoControl
+      @note pulse is 65535 if no pulse has been written to the pin yet
      */
     bool readServoPulse(uint16_t& pulse, const uint8_t pin);
     /*!
@@ -488,7 +506,8 @@ public:
       @param pin_bits Bits of the target pin
       @return True if successful
       @pre The mode of the specified pin must be Mode::ServoControl
-      @warning pulses values for unspecified pins are undefined
+      @note Elements of pins not in pin_bits are set to 0
+      @note pulses is 65535 for pins to which no pulse has been written yet
      */
     bool readPinBitsServoPulse(uint16_t pulses[NUMBER_OF_PINS], const uint8_t pin_bits);
     /*!
@@ -496,6 +515,7 @@ public:
       @param[out] pulses Pulse array
       @return True if successful
       @pre The mode of all pins must be Mode::ServoControl
+      @note pulses is 65535 for pins to which no pulse has been written yet
      */
     inline bool readAllServoPulse(uint16_t pulses[NUMBER_OF_PINS])
     {
@@ -504,23 +524,24 @@ public:
     /*!
       @brief Write the servo pulse to the specified pin
       @param pin Pin number
-      @param pulse Pulse
-      @return True if successful
+      @param pulse Pulse width (us, 500 - 2500)
+      @return True if successful, false if the value is out of range
       @pre The mode of the specified pin must be Mode::ServoControl
      */
     bool writeServoPulse(const uint8_t pin, const uint16_t pulse);
     /*!
       @brief Write the servo pulse to the specified pin bits
       @param pin_bits Bits of the target pin
-      @param pulse Pulse
-      @return True if successful
+      @param pulse Pulse width (us, 500 - 2500)
+      @return True if successful, false if the value is out of range
+      @note Returns false if pin_bits is 0
       @pre The mode of the specified pin must be Mode::ServoControl
      */
     bool writePinBitsServoPulse(const uint8_t pin_bits, const uint16_t pulse);
     /*!
       @brief Write the servo pulse to all pins
-      @param pulse Pulse
-      @return True if successful
+      @param pulse Pulse width (us, 500 - 2500)
+      @return True if successful, false if the value is out of range
       @pre The mode of all pins must be Mode::ServoControl
      */
     inline bool writeAllServoPulse(const uint16_t pulse)
@@ -545,7 +566,7 @@ public:
       @param pin_bits Bits of the target pin
       @return True if successful
       @pre The mode of the specified pin must be Mode::LEDControl
-      @warning rgb888 values for unspecified pins are undefined
+      @note Elements of pins not in pin_bits are set to 0
      */
     bool readPinBitsLEDColor(uint32_t rgb888[NUMBER_OF_PINS], const uint8_t pin_bits);
     /*!
@@ -597,6 +618,7 @@ public:
       @param g Green
       @param b Blue
       @return True if successful
+      @note Returns false if pin_bits is 0
       @pre The mode of the specified pin must be Mode::LEDControl
      */
     bool writePinBitsLEDColor(const uint8_t pin_bits, const uint8_t r, const uint8_t g, const uint8_t b);
@@ -647,7 +669,7 @@ protected:
     bool write_pin_bits_digital_output(const uint8_t pin_bits, const uint8_t high_bits);
 
     static constexpr uint8_t FIRMWARE_VERSION_CAN_PWM_CONTROL{0x03};
-    inline bool canPWMControl() const
+    inline bool can_pwm_control() const
     {
         return _fw_version >= FIRMWARE_VERSION_CAN_PWM_CONTROL;
     }
@@ -663,9 +685,9 @@ namespace extio2 {
 namespace command {
 constexpr uint8_t MODE_REG{0x00};
 constexpr uint8_t OUTPUT_CTL_REG{0x10};
-// constexpr uint8_t OUTPUTS_CTL_REG{0x18};
+// constexpr uint8_t OUTPUTS_CTL_REG{0x18};  // Firmware V3 only, not documented
 constexpr uint8_t DIGITAL_INPUT_REG{0x20};
-// constexpr uint8_t DIGITAL_INPUTS_REG{0x28};
+// constexpr uint8_t DIGITAL_INPUTS_REG{0x28};  // Firmware V3 only, not documented
 constexpr uint8_t ANALOG_INPUT_8BITS_REG{0x30};
 constexpr uint8_t ANALOG_INPUT_12BITS_REG{0x40};
 constexpr uint8_t SERVO_ANGLE_8BITS_REG{0x50};
